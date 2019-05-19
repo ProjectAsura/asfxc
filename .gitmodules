@@ -1,0 +1,3 @@
+[submodule "tool/external/HLSLcc"]
+	path = tool/external/HLSLcc
+	url = https://github.com/Unity-Technologies/HLSLcc
