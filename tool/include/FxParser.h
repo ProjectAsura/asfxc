@@ -13,6 +13,7 @@
 #include <map>
 
 
+namespace asura {
 
 ///////////////////////////////////////////////////////////////////////////////
 // SHADER_TYPE enum
@@ -223,11 +224,11 @@ struct BlendState
 ///////////////////////////////////////////////////////////////////////////////
 struct Pass
 {
-    std::string         Name;           //!< パス名です.
-    std::vector<Shader> Shaders;        //!< シェーダデータです.
-    std::string         RS;
-    std::string         DSS;
-    std::string         BS;
+    std::string                 Name;           //!< パス名です.
+    std::vector<Shader>         Shaders;        //!< シェーダデータです.
+    std::string                 RS;             //!< ラスタライザーステートです.
+    std::string                 DSS;            //!< 深度ステンシルステートです.
+    std::string                 BS;             //!< ブレンドステートです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -304,3 +305,5 @@ private:
     void ParsePreprocessor();
     SHADER_TYPE GetShaderType();
 };
+
+} // namespace asura

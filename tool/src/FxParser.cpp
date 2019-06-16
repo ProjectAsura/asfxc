@@ -26,6 +26,8 @@
 #endif//ELOG
 
 
+namespace asura {
+
 //-----------------------------------------------------------------------------
 //      シェーダタイプ文字列を返却します.
 //-----------------------------------------------------------------------------
@@ -287,6 +289,7 @@ FxParser::FxParser()
 , m_Tokenizer    ()
 , m_Technieues   ()
 , m_ShaderCounter(0)
+, m_BufferSize   (0)
 { /* DO_NOTHING */ }
 
 //-------------------------------------------------------------------------------------------------
@@ -442,7 +445,7 @@ bool FxParser::Parse(const char* filename)
 //-------------------------------------------------------------------------------------------------
 bool FxParser::Load(const char* filename)
 {
-    FILE* pFile;
+    FILE* pFile = nullptr;
 
     // ファイルを開く.
     auto ret = fopen_s( &pFile, filename, "rb" );
@@ -1344,3 +1347,4 @@ const std::map<std::string, DepthStencilState>& FxParser::GetDepthStencilStates(
 const std::vector<Technique>& FxParser::GetTechniques() const
 { return m_Technieues; }
 
+} // namespace asura
