@@ -374,6 +374,40 @@ bool FxParser::Parse(const char* filename)
             output = false;
             ParseTechnique();
         }
+        else if (m_Tokenizer.CompareAsLower("cbuffer"))
+        {
+            ParseConstantBuffer();
+        }
+        else if (m_Tokenizer.CompareAsLower("struct"))
+        {
+            ParseStruct();
+        }
+        else if (
+           m_Tokenizer.CompareAsLower("Texture1D")
+        || m_Tokenizer.CompareAsLower("Texture1DArray")
+        || m_Tokenizer.CompareAsLower("Texture2D")
+        || m_Tokenizer.CompareAsLower("Texture2DArray")
+        || m_Tokenizer.CompareAsLower("Texture2DMS")
+        || m_Tokenizer.CompareAsLower("Texture2DMSArray")
+        || m_Tokenizer.CompareAsLower("Texture3D")
+        || m_Tokenizer.CompareAsLower("TextureCube")
+        || m_Tokenizer.CompareAsLower("TextureCubeArray")
+        || m_Tokenizer.CompareAsLower("Buffer")
+        || m_Tokenizer.CompareAsLower("ByteAddressBuffer")
+        || m_Tokenizer.CompareAsLower("StructuredBuffer")
+        || m_Tokenizer.CompareAsLower("RWTexture1D")
+        || m_Tokenizer.CompareAsLower("RWTexture1DArray")
+        || m_Tokenizer.CompareAsLower("RWTexture2D")
+        || m_Tokenizer.CompareAsLower("RWTexture2DArray")
+        || m_Tokenizer.CompareAsLower("RWTexture3D")
+        || m_Tokenizer.CompareAsLower("RWBuffer")
+        || m_Tokenizer.CompareAsLower("RWByteAddressBuffer")
+        || m_Tokenizer.CompareAsLower("RWStructuredBuffer")
+        || m_Tokenizer.CompareAsLower("SamplerState")
+        || m_Tokenizer.CompareAsLower("SamplerComparisonState"))
+        {
+            ParseResource();
+        }
         // シェーダ.
         else if (
             m_Tokenizer.CompareAsLower("vertexshader") 
@@ -1170,9 +1204,1254 @@ void FxParser::ParseDepthStencilState()
     { m_DepthStencilStates[name] = state; }
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+//      定数バッファを解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseConstantBuffer()
+{
+    m_Tokenizer.Next();
+
+    // 定数バッファ名を取得.
+    auto name = std::string(m_Tokenizer.GetAsChar());
+
+    // 定数バッファ名を設定.
+    ConstantBuffer buffer = {};
+    buffer.Name     = name;
+    buffer.Register = -1;
+
+    m_Tokenizer.Next();
+    if (m_Tokenizer.Compare("register"))
+    {
+        m_Tokenizer.Next();
+        auto regStr = std::string(m_Tokenizer.GetAsChar());
+        auto regNo  = std::stoi(regStr.substr(1));
+        buffer.Register = uint32_t(regNo);
+
+        m_Tokenizer.Next();
+    }
+
+    assert(m_Tokenizer.Compare("{"));
+
+    TYPE_MODIFIER modifier = TYPE_MODIFIER_NONE;
+
+    while(!m_Tokenizer.IsEnd())
+    {
+        // テクニックブロック終了.
+        if (m_Tokenizer.Compare("}"))
+        {
+            break;
+        }
+        else if (m_Tokenizer.Compare("float"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT1x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT1x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT1x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT2x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT2x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT2x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT2x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT3x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT3x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT3x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT3x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT4x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT4x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT4x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_FLOAT4x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT1x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT1x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT1x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT2x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT2x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT2x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT2x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT3x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT3x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT3x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT3x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT4x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT4x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT4x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_INT4x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT1x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT1x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT1x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT2x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT2x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT2x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT2x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT3x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT3x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT3x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT3x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT4x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT4x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT4x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_UINT4x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL1x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL1x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL1x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL2x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL2x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL2x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL2x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL3x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL3x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL3x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL3x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL4x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL4x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL4x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_BOOL4x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE1x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE1x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE1x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE2x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE2x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE2x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE2x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE3x1, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE3x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE3x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE3x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x1"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x2"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE4x2, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x3"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE4x3, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x4"))
+        {
+            ParseConstantBufferMember(MEMBER_TYPE_DOUBLE4x4, buffer, modifier);
+        }
+        else if (m_Tokenizer.Compare("row_major"))
+        {
+            modifier = TYPE_MODIFIER_ROW_MAJOR;
+            m_Tokenizer.Next();
+        }
+        else if (m_Tokenizer.Compare("colum_major"))
+        {
+            modifier = TYPE_MODIFIER_COLUMN_MAJOR;
+            m_Tokenizer.Next();
+        }
+        else
+        {
+            auto name = m_Tokenizer.GetAsChar();
+            if (m_Structures.find(name) != m_Structures.end())
+            {
+                ParseConstantBufferMember(MEMBER_TYPE_STRUCT, buffer, modifier);
+            }
+            else
+            {
+                // 次のトークンを取得.
+                m_Tokenizer.Next();
+            }
+        }
+    }
+
+    if (m_ConstantBuffers.find(name) == m_ConstantBuffers.end())
+    { m_ConstantBuffers[name] = buffer; }
+}
+
+//-----------------------------------------------------------------------------
+//      定数バッファのメンバーを解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseConstantBufferMember
+(
+    MEMBER_TYPE     type,
+    ConstantBuffer& buffer,
+    TYPE_MODIFIER&  modifier
+)
+{
+    Member member = {};
+    member.Type         = type;
+    member.Modifier     = modifier;
+    member.PackOffset   = -1;
+
+    auto name = std::string(m_Tokenizer.NextAsChar());
+    auto pos = name.find(";");
+    auto end = false;
+    if (pos != std::string::npos)
+    {
+        end = true;
+        name = name.substr(0, pos);
+    }
+
+    member.Name = name;
+
+    modifier = TYPE_MODIFIER_NONE;
+
+    if (end)
+    {
+        buffer.Members.push_back(member);
+        return;
+    }
+
+    m_Tokenizer.Next();
+    if (m_Tokenizer.Compare("packoffset"))
+    {
+        auto offsetStr  = std::string(m_Tokenizer.GetAsChar());
+        pos = offsetStr.find(";");
+        auto offset     = std::stoi(offsetStr.substr(1, pos));
+        member.PackOffset = uint32_t(offset);
+    }
+
+    buffer.Members.push_back(member);
+}
+
+//-----------------------------------------------------------------------------
+//      構造体を解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseStruct()
+{
+    m_Tokenizer.Next();
+
+    // 構造体名を取得.
+    auto name = std::string(m_Tokenizer.GetAsChar());
+
+    // 構造体名を設定.
+    Structure structure;
+    structure.Name = name;
+
+    m_Tokenizer.Next();
+
+    assert(m_Tokenizer.Compare("{"));
+
+    TYPE_MODIFIER modifier = TYPE_MODIFIER_NONE;
+
+    while(!m_Tokenizer.IsEnd())
+    {
+        // テクニックブロック終了.
+        if (m_Tokenizer.Compare("}"))
+        {
+            break;
+        }
+        else if (m_Tokenizer.Compare("float"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT1x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT1x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float1x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT1x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT2x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT2x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT2x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float2x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT2x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT3x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT3x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT3x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float3x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT3x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT4x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT4x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT4x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("float4x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_FLOAT4x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT1x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT1x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int1x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT1x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT2x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT2x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT2x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int2x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT2x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT3x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT3x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT3x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int3x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT3x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT4x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT4x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT4x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("int4x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_INT4x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT1x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT1x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint1x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT1x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT2x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT2x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT2x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint2x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT2x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT3x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT3x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT3x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint3x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT3x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT4x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT4x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT4x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("uint4x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_UINT4x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL1x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL1x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool1x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL1x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL2x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL2x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL2x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool2x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL2x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL3x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL3x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL3x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool3x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL3x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL4x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL4x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL4x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("bool4x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_BOOL4x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE1x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE1x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double1x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE1x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE2x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE2x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE2x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double2x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE2x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE3x1, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE3x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE3x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double3x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE3x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x1"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x2"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE4x2, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x3"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE4x3, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("double4x4"))
+        {
+            ParseStructMember(MEMBER_TYPE_DOUBLE4x4, structure, modifier);
+        }
+        else if (m_Tokenizer.Compare("row_major"))
+        {
+            modifier = TYPE_MODIFIER_ROW_MAJOR;
+            m_Tokenizer.Next();
+        }
+        else if (m_Tokenizer.Compare("colum_major"))
+        {
+            modifier = TYPE_MODIFIER_COLUMN_MAJOR;
+            m_Tokenizer.Next();
+        }
+        else 
+        {
+            auto name = m_Tokenizer.GetAsChar();
+            if (m_Structures.find(name) != m_Structures.end())
+            {
+                ParseStructMember(MEMBER_TYPE_STRUCT, structure, modifier);
+            }
+            else
+            {
+                // 次のトークンを取得.
+                m_Tokenizer.Next();
+            }
+        }
+    }
+
+    if (m_Structures.find(name) == m_Structures.end())
+    { m_Structures[name] = structure; }
+}
+
+//-----------------------------------------------------------------------------
+//      構造体のメンバーを解析します
+//-----------------------------------------------------------------------------
+void FxParser::ParseStructMember
+(
+    MEMBER_TYPE     type,
+    Structure&      structure,
+    TYPE_MODIFIER&  modifier
+)
+{
+    Member member = {};
+    member.Type         = type;
+    member.Modifier     = modifier;
+    member.PackOffset   = -1;
+
+    auto name = std::string(m_Tokenizer.NextAsChar());
+    auto pos = name.find(";");
+    bool end = false;
+    if (pos != std::string::npos)
+    {
+        end = true;
+        name = name.substr(0, pos);
+    }
+
+    member.Name = name;
+    modifier = TYPE_MODIFIER_NONE;
+
+    if (end)
+    {
+        structure.Members.push_back(member);
+        return;
+    }
+
+    m_Tokenizer.Next();
+    if (m_Tokenizer.Compare(":"))
+    {
+        auto semantics = std::string(m_Tokenizer.NextAsChar());
+        pos = semantics.find(";");
+        semantics = semantics.substr(0, pos);
+    }
+
+    structure.Members.push_back(member);
+}
+
+//-----------------------------------------------------------------------------
+//      リソースを解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseResource()
+{
+    Resource res = {};
+
+    if (m_Tokenizer.CompareAsLower("Texture1D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE1D);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture1DArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE1DARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture2D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE2D);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture2DArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE2DARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture2DMS"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE2DMS);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture2DMSArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE2DMSARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("Texture3D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURE3D);
+    }
+    else if (m_Tokenizer.CompareAsLower("TextureCube"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURECUBE);
+    }
+    else if (m_Tokenizer.CompareAsLower("TextureCubeArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_TEXTURECUBEARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("Buffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_BUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("ByteAddressBuffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_BYTEADDRESS_BUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("StructuredBuffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_STRUCTURED_BUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWTexture1D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWTEXTURE1D);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWTexture1DArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWTEXTURE1DARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWTexture2D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWTEXTURE2D);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWTexture2DArray"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWTEXTURE2DARRAY);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWTexture3D"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWTEXTURE3D);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWBuffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWBUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWByteAddressBuffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWBYTEADDRESS_BUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("RWStructuredBuffer"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_RWSTRUCTURED_BUFFER);
+    }
+    else if (m_Tokenizer.CompareAsLower("SamplerState"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_SAMPLER_STATE);
+    }
+    else if (m_Tokenizer.CompareAsLower("SamplerComparisonState"))
+    {
+        ParseResourceDetail(RESOURCE_TYPE_SAMPLER_COMPRISON_STATE);
+    }
+}
+
+//-----------------------------------------------------------------------------
+//      リソース解析の実態.
+//-----------------------------------------------------------------------------
+void FxParser::ParseResourceDetail(RESOURCE_TYPE type)
+{
+    m_Tokenizer.Next();
+
+    MEMBER_TYPE dataType = MEMBER_TYPE_UNKNOWN;
+
+    if (m_Tokenizer.Compare("<"))
+    {
+        m_Tokenizer.Next();
+
+        if (m_Tokenizer.CompareAsLower("float"))
+        {
+            dataType = MEMBER_TYPE_FLOAT;
+        }
+        else if (m_Tokenizer.CompareAsLower("float2"))
+        {
+            dataType = MEMBER_TYPE_FLOAT2;
+        }
+        else if (m_Tokenizer.CompareAsLower("float3"))
+        {
+            dataType = MEMBER_TYPE_FLOAT3;
+        }
+        else if (m_Tokenizer.CompareAsLower("float4"))
+        {
+            dataType = MEMBER_TYPE_FLOAT4;
+        }
+        else if (m_Tokenizer.CompareAsLower("double"))
+        {
+            dataType = MEMBER_TYPE_DOUBLE;
+        }
+        else if (m_Tokenizer.CompareAsLower("double2"))
+        {
+            dataType = MEMBER_TYPE_DOUBLE2;
+        }
+        else if (m_Tokenizer.CompareAsLower("double3"))
+        {
+            dataType = MEMBER_TYPE_DOUBLE3;
+        }
+        else if (m_Tokenizer.CompareAsLower("double4"))
+        {
+            dataType = MEMBER_TYPE_DOUBLE4;
+        }
+        else if (m_Tokenizer.CompareAsLower("int"))
+        {
+            dataType = MEMBER_TYPE_INT;
+        }
+        else if (m_Tokenizer.CompareAsLower("int2"))
+        {
+            dataType = MEMBER_TYPE_INT2;
+        }
+        else if (m_Tokenizer.CompareAsLower("int3"))
+        {
+            dataType = MEMBER_TYPE_INT3;
+        }
+        else if (m_Tokenizer.CompareAsLower("int4"))
+        {
+            dataType = MEMBER_TYPE_INT4;
+        }
+        else if (m_Tokenizer.CompareAsLower("uint"))
+        {
+            dataType = MEMBER_TYPE_UINT;
+        }
+        else if (m_Tokenizer.CompareAsLower("uint2"))
+        {
+            dataType = MEMBER_TYPE_UINT2;
+        }
+        else if (m_Tokenizer.CompareAsLower("uint3"))
+        {
+            dataType = MEMBER_TYPE_UINT3;
+        }
+        else if (m_Tokenizer.CompareAsLower("uint4"))
+        {
+            dataType = MEMBER_TYPE_UINT4;
+        }
+        else
+        {
+            auto name = m_Tokenizer.GetAsChar();
+            if (m_Structures.find(name) != m_Structures.end())
+            {
+                dataType = MEMBER_TYPE_STRUCT;
+            }
+        }
+
+        m_Tokenizer.Next();
+        assert(m_Tokenizer.Compare(">"));
+        m_Tokenizer.Next();
+    }
+
+    auto name = std::string(m_Tokenizer.GetAsChar());
+    auto pos = name.find(";");
+    auto end = false;
+    if (pos != std::string::npos)
+    {
+        name = name.substr(0, pos);
+        end  = true;
+    }
+
+    Resource res = {};
+    res.Name            = name;
+    res.ResourceType    = type;
+    res.Register        = -1;
+    res.DataType        = dataType;
+
+    if (end)
+    {
+        if (m_Resources.find(name) == m_Resources.end())
+        {
+            m_Resources[name] = res;
+            return;
+        }
+    }
+
+    m_Tokenizer.Next();
+    assert(m_Tokenizer.Compare(":"));
+    m_Tokenizer.Next();
+
+    if (m_Tokenizer.CompareAsLower("register"))
+    {
+        m_Tokenizer.Next();
+        assert(m_Tokenizer.Compare("("));
+        auto reg = std::string(m_Tokenizer.NextAsChar());
+        auto idx = std::stoi(reg.substr(1));
+        res.Register = uint32_t(idx);
+        m_Tokenizer.Next();
+        assert(m_Tokenizer.Compare(")"));
+    }
+
+    if (m_Resources.find(name) == m_Resources.end())
+    {
+        m_Resources[name] = res;
+    }
+}
+
+//-----------------------------------------------------------------------------
 //      トークンをシェーダタイプとして取得します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 SHADER_TYPE FxParser::GetShaderType()
 {
     SHADER_TYPE type = SHADER_TYPE(-1);
@@ -1340,6 +2619,24 @@ const std::map<std::string, RasterizerState>& FxParser::GetRasterizerStates() co
 //-----------------------------------------------------------------------------
 const std::map<std::string, DepthStencilState>& FxParser::GetDepthStencilStates() const
 { return m_DepthStencilStates; }
+
+//-----------------------------------------------------------------------------
+//      定数バッファを取得します.
+//-----------------------------------------------------------------------------
+const std::map<std::string, ConstantBuffer>& FxParser::GetConstantBuffers() const
+{ return m_ConstantBuffers; }
+
+//-----------------------------------------------------------------------------
+//      構造体を取得します.
+//-----------------------------------------------------------------------------
+const std::map<std::string, Structure>& FxParser::GetStructures() const
+{ return m_Structures; }
+
+//-----------------------------------------------------------------------------
+//      リソースを取得します.
+//-----------------------------------------------------------------------------
+const std::map<std::string, Resource>& FxParser::GetResources() const
+{ return m_Resources; }
 
 //-----------------------------------------------------------------------------
 //      テクニックを取得します.

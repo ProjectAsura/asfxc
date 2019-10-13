@@ -155,6 +155,149 @@ enum BLEND_OP_TYPE
     BLEND_OP_TYPE_MAX,
 };
 
+///////////////////////////////////////////////////////////////////////////////
+// MEMBER_TYPE enum
+///////////////////////////////////////////////////////////////////////////////
+enum MEMBER_TYPE
+{
+    MEMBER_TYPE_UNKNOWN,
+    MEMBER_TYPE_BOOL,
+    MEMBER_TYPE_BOOL1x2,
+    MEMBER_TYPE_BOOL1x3,
+    MEMBER_TYPE_BOOL1x4,
+    MEMBER_TYPE_BOOL2,
+    MEMBER_TYPE_BOOL2x1,
+    MEMBER_TYPE_BOOL2x2,
+    MEMBER_TYPE_BOOL2x3,
+    MEMBER_TYPE_BOOL2x4,
+    MEMBER_TYPE_BOOL3,
+    MEMBER_TYPE_BOOL3x1,
+    MEMBER_TYPE_BOOL3x2,
+    MEMBER_TYPE_BOOL3x3,
+    MEMBER_TYPE_BOOL3x4,
+    MEMBER_TYPE_BOOL4,
+    MEMBER_TYPE_BOOL4x1,
+    MEMBER_TYPE_BOOL4x2,
+    MEMBER_TYPE_BOOL4x3,
+    MEMBER_TYPE_BOOL4x4,
+    MEMBER_TYPE_INT,
+    MEMBER_TYPE_INT1x2,
+    MEMBER_TYPE_INT1x3,
+    MEMBER_TYPE_INT1x4,
+    MEMBER_TYPE_INT2,
+    MEMBER_TYPE_INT2x1,
+    MEMBER_TYPE_INT2x2,
+    MEMBER_TYPE_INT2x3,
+    MEMBER_TYPE_INT2x4,
+    MEMBER_TYPE_INT3,
+    MEMBER_TYPE_INT3x1,
+    MEMBER_TYPE_INT3x2,
+    MEMBER_TYPE_INT3x3,
+    MEMBER_TYPE_INT3x4,
+    MEMBER_TYPE_INT4,
+    MEMBER_TYPE_INT4x1,
+    MEMBER_TYPE_INT4x2,
+    MEMBER_TYPE_INT4x3,
+    MEMBER_TYPE_INT4x4,
+    MEMBER_TYPE_UINT,
+    MEMBER_TYPE_UINT1x2,
+    MEMBER_TYPE_UINT1x3,
+    MEMBER_TYPE_UINT1x4,
+    MEMBER_TYPE_UINT2,
+    MEMBER_TYPE_UINT2x1,
+    MEMBER_TYPE_UINT2x2,
+    MEMBER_TYPE_UINT2x3,
+    MEMBER_TYPE_UINT2x4,
+    MEMBER_TYPE_UINT3,
+    MEMBER_TYPE_UINT3x1,
+    MEMBER_TYPE_UINT3x2,
+    MEMBER_TYPE_UINT3x3,
+    MEMBER_TYPE_UINT3x4,
+    MEMBER_TYPE_UINT4,
+    MEMBER_TYPE_UINT4x1,
+    MEMBER_TYPE_UINT4x2,
+    MEMBER_TYPE_UINT4x3,
+    MEMBER_TYPE_UINT4x4,
+    MEMBER_TYPE_DOUBLE,
+    MEMBER_TYPE_DOUBLE1x2,
+    MEMBER_TYPE_DOUBLE1x3,
+    MEMBER_TYPE_DOUBLE1x4,
+    MEMBER_TYPE_DOUBLE2,
+    MEMBER_TYPE_DOUBLE2x1,
+    MEMBER_TYPE_DOUBLE2x2,
+    MEMBER_TYPE_DOUBLE2x3,
+    MEMBER_TYPE_DOUBLE2x4,
+    MEMBER_TYPE_DOUBLE3,
+    MEMBER_TYPE_DOUBLE3x1,
+    MEMBER_TYPE_DOUBLE3x2,
+    MEMBER_TYPE_DOUBLE3x3,
+    MEMBER_TYPE_DOUBLE3x4,
+    MEMBER_TYPE_DOUBLE4,
+    MEMBER_TYPE_DOUBLE4x1,
+    MEMBER_TYPE_DOUBLE4x2,
+    MEMBER_TYPE_DOUBLE4x3,
+    MEMBER_TYPE_DOUBLE4x4,
+    MEMBER_TYPE_FLOAT,
+    MEMBER_TYPE_FLOAT1x2,
+    MEMBER_TYPE_FLOAT1x3,
+    MEMBER_TYPE_FLOAT1x4,
+    MEMBER_TYPE_FLOAT2,
+    MEMBER_TYPE_FLOAT2x1,
+    MEMBER_TYPE_FLOAT2x2,
+    MEMBER_TYPE_FLOAT2x3,
+    MEMBER_TYPE_FLOAT2x4,
+    MEMBER_TYPE_FLOAT3,
+    MEMBER_TYPE_FLOAT3x1,
+    MEMBER_TYPE_FLOAT3x2,
+    MEMBER_TYPE_FLOAT3x3,
+    MEMBER_TYPE_FLOAT3x4,
+    MEMBER_TYPE_FLOAT4,
+    MEMBER_TYPE_FLOAT4x1,
+    MEMBER_TYPE_FLOAT4x2,
+    MEMBER_TYPE_FLOAT4x3,
+    MEMBER_TYPE_FLOAT4x4,
+    MEMBER_TYPE_STRUCT,
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// TYPE_MODIFIER enum
+///////////////////////////////////////////////////////////////////////////////
+enum TYPE_MODIFIER
+{
+    TYPE_MODIFIER_NONE          = 0,
+    TYPE_MODIFIER_CONST         = 0x1 << 0,
+    TYPE_MODIFIER_ROW_MAJOR     = 0x1 << 1,
+    TYPE_MODIFIER_COLUMN_MAJOR  = 0x1 << 2,
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// RESOURCE_TYPE
+///////////////////////////////////////////////////////////////////////////////
+enum RESOURCE_TYPE
+{
+    RESOURCE_TYPE_TEXTURE1D,
+    RESOURCE_TYPE_TEXTURE1DARRAY,
+    RESOURCE_TYPE_TEXTURE2D,
+    RESOURCE_TYPE_TEXTURE2DARRAY,
+    RESOURCE_TYPE_TEXTURE2DMS,
+    RESOURCE_TYPE_TEXTURE2DMSARRAY,
+    RESOURCE_TYPE_TEXTURE3D,
+    RESOURCE_TYPE_TEXTURECUBE,
+    RESOURCE_TYPE_TEXTURECUBEARRAY,
+    RESOURCE_TYPE_BUFFER,
+    RESOURCE_TYPE_STRUCTURED_BUFFER,
+    RESOURCE_TYPE_BYTEADDRESS_BUFFER,
+    RESOURCE_TYPE_RWTEXTURE1D,
+    RESOURCE_TYPE_RWTEXTURE1DARRAY,
+    RESOURCE_TYPE_RWTEXTURE2D,
+    RESOURCE_TYPE_RWTEXTURE2DARRAY,
+    RESOURCE_TYPE_RWTEXTURE3D,
+    RESOURCE_TYPE_RWBUFFER,
+    RESOURCE_TYPE_RWSTRUCTURED_BUFFER,
+    RESOURCE_TYPE_RWBYTEADDRESS_BUFFER,
+    RESOURCE_TYPE_SAMPLER_STATE,
+    RESOURCE_TYPE_SAMPLER_COMPRISON_STATE,
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // Shader 
@@ -220,6 +363,47 @@ struct BlendState
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// Member
+///////////////////////////////////////////////////////////////////////////////
+struct Member
+{
+    std::string     Name;
+    MEMBER_TYPE     Type;
+    TYPE_MODIFIER   Modifier;
+    uint32_t        PackOffset;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// ConstantBuffer
+///////////////////////////////////////////////////////////////////////////////
+struct ConstantBuffer
+{
+    std::string             Name;
+    uint32_t                Register;
+    std::vector<Member>     Members;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Structure
+///////////////////////////////////////////////////////////////////////////////
+struct Structure
+{
+    std::string             Name;
+    std::vector<Member>     Members;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Resource
+///////////////////////////////////////////////////////////////////////////////
+struct Resource
+{
+    std::string         Name;
+    RESOURCE_TYPE       ResourceType;
+    MEMBER_TYPE         DataType;
+    uint32_t            Register;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Pass
 ///////////////////////////////////////////////////////////////////////////////
 struct Pass
@@ -273,6 +457,9 @@ public:
     const std::map<std::string, BlendState>& GetBlendStates() const;
     const std::map<std::string, RasterizerState>& GetRasterizerStates() const;
     const std::map<std::string, DepthStencilState>& GetDepthStencilStates() const;
+    const std::map<std::string, ConstantBuffer>& GetConstantBuffers() const;
+    const std::map<std::string, Structure>& GetStructures() const;
+    const std::map<std::string, Resource>& GetResources() const;
     const std::vector<Technique>& GetTechniques() const;
 
 private:
@@ -287,6 +474,9 @@ private:
     std::map<std::string, BlendState>           m_BlendStates;
     std::map<std::string, RasterizerState>      m_RasterizerStates;
     std::map<std::string, DepthStencilState>    m_DepthStencilStates;
+    std::map<std::string, ConstantBuffer>       m_ConstantBuffers;
+    std::map<std::string, Structure>            m_Structures;
+    std::map<std::string, Resource>             m_Resources;
     std::vector<std::string>                    m_Includes;
     std::string                                 m_SourceCode;
     int                                         m_ShaderCounter;
@@ -303,6 +493,12 @@ private:
     void ParseRasterizerState();
     void ParseDepthStencilState();
     void ParsePreprocessor();
+    void ParseConstantBuffer();
+    void ParseConstantBufferMember(MEMBER_TYPE type, ConstantBuffer& buffer, TYPE_MODIFIER& modifier);
+    void ParseStruct();
+    void ParseStructMember(MEMBER_TYPE type, Structure& structure, TYPE_MODIFIER& modifier);
+    void ParseResource();
+    void ParseResourceDetail(RESOURCE_TYPE type);
     SHADER_TYPE GetShaderType();
 };
 
