@@ -38,11 +38,12 @@ public:
     void        Term            ();
     void        SetSeparator    ( const char* separator );
     void        SetCutOff       ( const char* cutoff );
-    void        SetBuffer       ( char *buffer );
+    void        SetBuffer       ( char *buffer, size_t bufferSize);
     bool        Compare         ( const char *token ) const;
     bool        CompareAsLower  ( const char *token ) const;
     char*       Contain         ( const char *token ) const;
     bool        IsEnd           () const;
+    bool        IsValidToken    () const;
     char*       GetAsChar       () const;
     double      GetAsDouble     () const;
     float       GetAsFloat      () const;
@@ -70,6 +71,7 @@ private:
     char*           m_pToken;       //!< トークン.
     std::string     m_Separator;    //!< 区切り文字.
     std::string     m_CutOff;       //!< 切り出し文字.
+    size_t          m_BufferSize;   //!< バッファサイズ.
 
     //=============================================================================================
     // private methods

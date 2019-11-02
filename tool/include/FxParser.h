@@ -260,6 +260,28 @@ enum MEMBER_TYPE
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// PROPERTY_TYPE enum
+///////////////////////////////////////////////////////////////////////////////
+enum PROPERTY_TYPE
+{
+    PROPERTY_TYPE_BOOL,
+    PROPERTY_TYPE_INT,
+    PROPERTY_TYPE_FLOAT,
+    PROPERTY_TYPE_FLOAT2,
+    PROPERTY_TYPE_FLOAT3,
+    PROPERTY_TYPE_FLOAT4,
+    PROPERTY_TYPE_COLOR3,
+    PROPERTY_TYPE_COLOR4,
+    PROPERTY_TYPE_TEXTURE1D,
+    PROPERTY_TYPE_TEXTURE1D_ARRAY,
+    PROPERTY_TYPE_TEXTURE2D,
+    PROPERTY_TYPE_TEXTURE2D_ARRAY,
+    PROPERTY_TYPE_TEXTURE3D,
+    PROPERTY_TYPE_TEXTURECUBE,
+    PROPERTY_TYPE_TEXTURECUBE_ARRAY
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // TYPE_MODIFIER enum
 ///////////////////////////////////////////////////////////////////////////////
 enum TYPE_MODIFIER
@@ -393,6 +415,35 @@ struct Structure
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// ValueProperty 
+///////////////////////////////////////////////////////////////////////////////
+struct ValueProperty
+{
+    std::string         Name;
+    std::string         DisplayTag;
+    PROPERTY_TYPE       Type;
+    float               Min;
+    float               Max;
+    float               Step;
+    std::string         DefaultValue0;
+    std::string         DefaultValue1;
+    std::string         DefaultValue2;
+    std::string         DefaultValue3;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// TextureProperty
+///////////////////////////////////////////////////////////////////////////////
+struct TextureProperty
+{
+    std::string         Name;
+    std::string         DisplayTag;
+    PROPERTY_TYPE       Type;
+    bool                SRGB;
+    std::string         DefaultValue;
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // Resource
 ///////////////////////////////////////////////////////////////////////////////
 struct Resource
@@ -449,7 +500,7 @@ public:
 
     void Clear();
     bool Parse(const char* filename);
-    bool WriteVariationInfo(const char* filename);
+    bool WriteVariationInfo(const char* xmlpath, const char* hlslpath);
     bool WriteSourceCode(const char* filename);
 
     const char* GetSourceCode() const;
@@ -477,10 +528,13 @@ private:
     std::map<std::string, ConstantBuffer>       m_ConstantBuffers;
     std::map<std::string, Structure>            m_Structures;
     std::map<std::string, Resource>             m_Resources;
+    std::map<std::string, ValueProperty>        m_ValueProperties;
+    std::map<std::string, TextureProperty>      m_TextureProperties;
     std::vector<std::string>                    m_Includes;
     std::string                                 m_SourceCode;
     int                                         m_ShaderCounter;
     size_t                                      m_BufferSize;
+    size_t                                      m_ReadSize;
 
     //========================================================================
     // private methods.
@@ -496,9 +550,11 @@ private:
     void ParseConstantBuffer();
     void ParseConstantBufferMember(MEMBER_TYPE type, ConstantBuffer& buffer, TYPE_MODIFIER& modifier);
     void ParseStruct();
+    void ParseProperties();
     void ParseStructMember(MEMBER_TYPE type, Structure& structure, TYPE_MODIFIER& modifier);
     void ParseResource();
     void ParseResourceDetail(RESOURCE_TYPE type);
+    void ParseTextureProperty(PROPERTY_TYPE type);
     SHADER_TYPE GetShaderType();
 };
 

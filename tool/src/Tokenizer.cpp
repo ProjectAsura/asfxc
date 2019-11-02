@@ -78,10 +78,11 @@ void Tokenizer::SetCutOff(const char *cutoff)
 //-----------------------------------------------------------------------------
 //      バッファを設定します.
 //-----------------------------------------------------------------------------
-void Tokenizer::SetBuffer(char *buffer)
+void Tokenizer::SetBuffer(char *buffer, size_t bufferSize)
 {
     m_pBuffer = buffer;
     m_pPtr    = buffer;
+    m_BufferSize = bufferSize;
 
     Next();
 }
@@ -91,6 +92,10 @@ void Tokenizer::SetBuffer(char *buffer)
 //-----------------------------------------------------------------------------
 void Tokenizer::Next()
 {
+    auto sizeP = size_t(m_pPtr - m_pBuffer);
+    if (sizeP >= m_BufferSize)
+    { return; }
+
     auto p = m_pPtr;
     auto q = m_pToken;
 
@@ -130,7 +135,10 @@ void Tokenizer::SkipTo(const char* text)
     {
         auto ret = Contain(text);
         if (ret != nullptr)
-        { break; }
+        {
+            Next();
+            break;
+        }
 
         Next();
     }
@@ -180,7 +188,19 @@ char* Tokenizer::Contain(const char* token) const
 //      最後かどうかチェックします.
 //-----------------------------------------------------------------------------
 bool Tokenizer::IsEnd() const
-{ return (*m_pPtr == '\0' || m_pPtr == nullptr); }
+{
+    if (*m_pPtr == '\0' || m_pPtr == nullptr)
+    { return true; }
+
+    auto sizeP = size_t(m_pPtr - m_pBuffer);
+    return (sizeP >= m_BufferSize);
+}
+
+//-----------------------------------------------------------------------------
+//      トークンが有効かどうかチェックします.
+//-----------------------------------------------------------------------------
+bool Tokenizer::IsValidToken() const
+{ return (*m_pToken != '\0' && m_pToken != nullptr); }
 
 //-----------------------------------------------------------------------------
 //      バッファを取得します.

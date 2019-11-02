@@ -333,11 +333,11 @@ bool FxParser::Parse(const char* filename)
         return false;
     }
 
-    m_SourceCode.reserve( m_BufferSize );
+    m_SourceCode.reserve( m_ReadSize );
 
-    m_Tokenizer.SetSeparator( " \t\r\n" );
-    m_Tokenizer.SetCutOff( "{}()=#<>" );
-    m_Tokenizer.SetBuffer( m_pBuffer );
+    m_Tokenizer.SetSeparator( " \t\r\n,\"" );
+    m_Tokenizer.SetCutOff( "{}()=#<>;" );
+    m_Tokenizer.SetBuffer( m_pBuffer, m_ReadSize );
 
     auto cur = m_Tokenizer.GetBuffer();
 
@@ -374,13 +374,21 @@ bool FxParser::Parse(const char* filename)
             output = false;
             ParseTechnique();
         }
+        // 定数バッファ.
         else if (m_Tokenizer.CompareAsLower("cbuffer"))
         {
             ParseConstantBuffer();
         }
+        // 構造体.
         else if (m_Tokenizer.CompareAsLower("struct"))
         {
             ParseStruct();
+        }
+        // プロパティ.
+        else if (m_Tokenizer.CompareAsLower("properties"))
+        {
+            output = false;
+            ParseProperties();
         }
         else if (
            m_Tokenizer.CompareAsLower("Texture1D")
@@ -439,15 +447,16 @@ bool FxParser::Parse(const char* filename)
         auto ptr = m_Tokenizer.GetPtr();
 
         // ソースコード文字列に追加.
-        if (output)
+        if (output && !m_Tokenizer.IsEnd())
         {
-            auto size = ptr - cur;
-            m_SourceCode.append(cur, size);
+            auto size = (ptr - cur);
 
         #if 0 // デバッグのための視認用.
             for(auto i=0; i<size; ++i)
             { putchar(cur[i]); }
         #endif
+
+            m_SourceCode.append(cur, size);
         }
 
         cur = ptr;
@@ -482,7 +491,7 @@ bool FxParser::Load(const char* filename)
     FILE* pFile = nullptr;
 
     // ファイルを開く.
-    auto ret = fopen_s( &pFile, filename, "rb" );
+    auto ret = fopen_s( &pFile, filename, "r" );
     if ( ret != 0 )
     {
         ELOG( "Error : File Open Failed." );
@@ -490,6 +499,8 @@ bool FxParser::Load(const char* filename)
     }
 
     // ファイルサイズを算出.
+    // ※このファイルサイズ計算は推奨されない方式なので注意!!
+    // https://www.jpcert.or.jp/sc-rules/c-fio19-c.html
     auto curpos = ftell(pFile);
     fseek(pFile, 0, SEEK_END);
     auto endpos = ftell(pFile);
@@ -507,10 +518,19 @@ bool FxParser::Load(const char* filename)
     }
 
     // null終端になるようゼロクリア.
-    memset(m_pBuffer, 0, sizeof(char) * (m_BufferSize + 1));
+    memset(m_pBuffer, 0, m_BufferSize + 1);
 
     // 一括読み込み.
-    fread(m_pBuffer, sizeof(char) * m_BufferSize, 1, pFile);
+    m_ReadSize = fread(m_pBuffer, 1, m_BufferSize, pFile);
+
+    if (m_BufferSize != m_ReadSize)
+    {
+        auto size = m_BufferSize - m_ReadSize;
+        assert(size >= 0);
+
+        // ゴミが入るので，クリアする.
+        memset(m_pBuffer + m_ReadSize, 0, size);
+    }
 
     // ファイルを閉じる.
     fclose(pFile);
@@ -1738,7 +1758,7 @@ void FxParser::ParseStruct()
 
     while(!m_Tokenizer.IsEnd())
     {
-        // テクニックブロック終了.
+        // 構造体ブロック終了.
         if (m_Tokenizer.Compare("}"))
         {
             break;
@@ -2217,6 +2237,709 @@ void FxParser::ParseStructMember
 }
 
 //-----------------------------------------------------------------------------
+//      プロパティを解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseProperties()
+{
+    /*
+        Properties
+        {
+            bool    value1("flag") = false;
+            float   value1("alpha", 0.1, range(0.0f, 1.0f)) = 1.0f;
+            float2  value2("uv_offset", 0.01f) = float2(0.0f, 0.0f);
+            float3  value3("color_scale", 0.01f) = float3(1.0f, 1.0f, 1.0f);
+            float4  value4("test", 1.0f) = float4(0.0f, 0.0f, 0.0f, 0.0f);
+            color3  value5("emissive") = color3(0.0f, 0.0f, 0.0f);
+            color4  value6("base_color") = color4(0.0f, 0.0f, 0.0f, 1.0f);
+            map1D   myTexture1("noise", false) = "texture_file_name";
+            map2D   myTexture2("roughness") = "white";
+            map3D   myTexture3("volume", true) = "white";
+            mapCube mayTexture4("ibl_diffuse", false) = "black";
+        };
+    
+    */
+    m_Tokenizer.Next();
+
+    assert(m_Tokenizer.Compare("{"));
+    int count = 1;
+    m_Tokenizer.Next();
+
+
+    while(!m_Tokenizer.IsEnd())
+    {
+        // ブロック終了.
+        if (m_Tokenizer.Compare("}"))
+        {
+            count--;
+            if (count == 0)
+            { break; }
+        }
+        // ブロック開始.
+        else if (m_Tokenizer.Compare("{"))
+        {
+            count++;
+        }
+
+        if (m_Tokenizer.CompareAsLower("bool"))
+        {
+            // 次のフォーマット.
+            // bool name("display") = default;
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            auto defValue = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_BOOL;
+            prop.Step           = 0;
+            prop.Min            = 0.0f;
+            prop.Max            = 0.0f;
+            prop.DefaultValue0  = defValue;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("int"))
+        {
+            // 次のフォーマット
+            // int name("display", step, range(min, max)) = default;
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            auto step = m_Tokenizer.NextAsFloat();
+            m_Tokenizer.Next();
+
+            float mini = 0.0f;
+            float maxi = 0.0f;
+            if (m_Tokenizer.CompareAsLower("range"))
+            {
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare("("));
+                mini = m_Tokenizer.NextAsFloat();
+                maxi = m_Tokenizer.NextAsFloat();
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare(")"));
+                m_Tokenizer.Next();
+            }
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            auto defValue = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_INT;
+            prop.Step           = step;
+            prop.Min            = mini;
+            prop.Max            = maxi;
+            prop.DefaultValue0  = defValue;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("float"))
+        {
+            // 次のフォーマット
+            // float name("display", step, range(min, max)) = default;
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            auto step = m_Tokenizer.NextAsFloat();
+            m_Tokenizer.Next();
+
+            float mini = 0.0f;
+            float maxi = 0.0f;
+            if (m_Tokenizer.CompareAsLower("range"))
+            {
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare("("));
+                mini = m_Tokenizer.NextAsFloat();
+                maxi = m_Tokenizer.NextAsFloat();
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare(")"));
+                m_Tokenizer.Next();
+            }
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            auto defValue = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+            m_Tokenizer.Next();
+
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_FLOAT;
+            prop.Step           = step;
+            prop.Min            = mini;
+            prop.Max            = maxi;
+            prop.DefaultValue0  = defValue;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("float2"))
+        {
+            // 次のフォーマット
+            // float2 name("display", step, range(min, max)) = float2(default.x, default.y);
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            auto step = m_Tokenizer.NextAsFloat();
+            m_Tokenizer.Next();
+
+            float mini = 0.0f;
+            float maxi = 0.0f;
+            if (m_Tokenizer.CompareAsLower("range"))
+            {
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare("("));
+                mini = m_Tokenizer.NextAsFloat();
+                maxi = m_Tokenizer.NextAsFloat();
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare(")"));
+                m_Tokenizer.Next();
+            }
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("float2"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("("));
+            auto defValueX = std::string(m_Tokenizer.NextAsChar());
+            auto defValueY = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+            m_Tokenizer.Next();
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_FLOAT2;
+            prop.Step           = step;
+            prop.Min            = mini;
+            prop.Max            = maxi;
+            prop.DefaultValue0  = defValueX;
+            prop.DefaultValue1  = defValueY;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("float3"))
+        {
+            // 次のフォーマット
+            // float3 name("display", step, range(min, max)) = float3(default.x, default.y, default.z);
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            auto step = m_Tokenizer.NextAsFloat();
+            m_Tokenizer.Next();
+
+            float mini = 0.0f;
+            float maxi = 0.0f;
+            if (m_Tokenizer.CompareAsLower("range"))
+            {
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare("("));
+                mini = m_Tokenizer.NextAsFloat();
+                maxi = m_Tokenizer.NextAsFloat();
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare(")"));
+                m_Tokenizer.Next();
+            }
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("float3"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("("));
+            auto defValueX = std::string(m_Tokenizer.NextAsChar());
+            auto defValueY = std::string(m_Tokenizer.NextAsChar());
+            auto defValueZ = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+            m_Tokenizer.Next();
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_FLOAT3;
+            prop.Step           = step;
+            prop.Min            = mini;
+            prop.Max            = maxi;
+            prop.DefaultValue0  = defValueX;
+            prop.DefaultValue1  = defValueY;
+            prop.DefaultValue2  = defValueZ;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("float4"))
+        {
+            // 次のフォーマット
+            // float4 name("display", step, range(min, max)) = float4(default.x, default.y, default.z, default.w);
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            auto step = m_Tokenizer.NextAsFloat();
+            m_Tokenizer.Next();
+
+            float mini = 0.0f;
+            float maxi = 0.0f;
+            if (m_Tokenizer.CompareAsLower("range"))
+            {
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare("("));
+                mini = m_Tokenizer.NextAsFloat();
+                maxi = m_Tokenizer.NextAsFloat();
+                m_Tokenizer.Next();
+                assert(m_Tokenizer.Compare(")"));
+                m_Tokenizer.Next();
+            }
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("float4"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("("));
+            auto defValueX = std::string(m_Tokenizer.NextAsChar());
+            auto defValueY = std::string(m_Tokenizer.NextAsChar());
+            auto defValueZ = std::string(m_Tokenizer.NextAsChar());
+            auto defValueW = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+            m_Tokenizer.Next();
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_FLOAT4;
+            prop.Step           = step;
+            prop.Min            = mini;
+            prop.Max            = maxi;
+            prop.DefaultValue0  = defValueX;
+            prop.DefaultValue1  = defValueY;
+            prop.DefaultValue2  = defValueZ;
+            prop.DefaultValue3  = defValueW;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("color3"))
+        {
+            // 次のフォーマット
+            // color3 name("display") = color3(default.r, default.g, default.b);
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("color3"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("("));
+            auto defValueX = std::string(m_Tokenizer.NextAsChar());
+            auto defValueY = std::string(m_Tokenizer.NextAsChar());
+            auto defValueZ = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_COLOR3;
+            prop.Step           = 0.0f;
+            prop.Min            = 0.0f;
+            prop.Max            = 0.0f;
+            prop.DefaultValue0  = defValueX;
+            prop.DefaultValue1  = defValueY;
+            prop.DefaultValue2  = defValueZ;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("color4"))
+        {
+            // 次のフォーマット
+            // color4 name("display") = color4(default.r, default.g, default.b, default.a);
+
+            auto name = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("("));
+            auto display_tag = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("="));
+            m_Tokenizer.Next();
+
+            assert(m_Tokenizer.Compare("color4"));
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare("("));
+            auto defValueX = std::string(m_Tokenizer.NextAsChar());
+            auto defValueY = std::string(m_Tokenizer.NextAsChar());
+            auto defValueZ = std::string(m_Tokenizer.NextAsChar());
+            auto defValueW = std::string(m_Tokenizer.NextAsChar());
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(")"));
+            m_Tokenizer.Next();
+
+            ValueProperty prop;
+            prop.Name           = name;
+            prop.DisplayTag     = display_tag;
+            prop.Type           = PROPERTY_TYPE_COLOR4;
+            prop.Step           = 0.0f;
+            prop.Min            = 0.0f;
+            prop.Max            = 0.0f;
+            prop.DefaultValue0  = defValueX;
+            prop.DefaultValue1  = defValueY;
+            prop.DefaultValue2  = defValueZ;
+            prop.DefaultValue3  = defValueW;
+
+            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
+            { m_ValueProperties[prop.Name] = prop; }
+        }
+        else if (m_Tokenizer.CompareAsLower("map1d"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURE1D);
+        }
+        else if (m_Tokenizer.CompareAsLower("map1darray"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURE1D_ARRAY);
+        }
+        else if (m_Tokenizer.CompareAsLower("map2d"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURE2D);
+        }
+        else if (m_Tokenizer.CompareAsLower("map2darray"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURE2D_ARRAY);
+        }
+        else if (m_Tokenizer.CompareAsLower("map3d"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURE3D);
+        }
+        else if (m_Tokenizer.CompareAsLower("mapcube"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURECUBE);
+        }
+        else if (m_Tokenizer.CompareAsLower("mapcubearray"))
+        {
+            ParseTextureProperty(PROPERTY_TYPE_TEXTURECUBE_ARRAY);
+        }
+        else
+        {
+            m_Tokenizer.Next();
+        }
+    }
+
+    if (!m_ValueProperties.empty())
+    {
+        m_SourceCode += "cbuffer CbProperties\n";
+        m_SourceCode += "{\n";
+
+        for(auto& itr : m_ValueProperties)
+        {
+            auto& prop = itr.second;
+            m_SourceCode += "    ";
+            switch(prop.Type)
+            {
+            case PROPERTY_TYPE_BOOL:
+                {
+                    m_SourceCode += "int";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_INT:
+                {
+                    m_SourceCode += "int";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT:
+                {
+                    m_SourceCode += "float";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT2:
+                {
+                    m_SourceCode += "float2";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT3:
+                {
+                    m_SourceCode += "float3";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT4:
+                {
+                    m_SourceCode += "float4";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_COLOR3:
+                {
+                    m_SourceCode += "float3";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_COLOR4:
+                {
+                    m_SourceCode += "float4";
+                    m_SourceCode += " ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+            }
+        }
+
+        m_SourceCode += "};\n\n";
+    }
+
+    if (!m_TextureProperties.empty())
+    {
+        for(auto& itr : m_TextureProperties)
+        {
+            auto& prop = itr.second;
+            switch(prop.Type)
+            {
+            case PROPERTY_TYPE_TEXTURE1D:
+                {
+                    m_SourceCode += "Texture1D ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE1D_ARRAY:
+                {
+                    m_SourceCode += "Texture1DArray ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE2D:
+                {
+                    m_SourceCode += "Texture2D ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE2D_ARRAY:
+                {
+                    m_SourceCode += "Texture2DArray ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE3D:
+                {
+                    m_SourceCode += "Texture3D ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURECUBE:
+                {
+                    m_SourceCode += "TextureCube ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURECUBE_ARRAY:
+                {
+                    m_SourceCode += "TextureCubeArray ";
+                    m_SourceCode += prop.Name;
+                    m_SourceCode += ";";
+                    m_SourceCode += "    //";
+                    m_SourceCode += prop.DisplayTag;
+                    m_SourceCode += "\n";
+                }
+                break;
+            }
+        }
+        m_SourceCode += "\n";
+    }
+}
+
+//-----------------------------------------------------------------------------
+//      テクスチャプロパティを解析します.
+//-----------------------------------------------------------------------------
+void FxParser::ParseTextureProperty(PROPERTY_TYPE type)
+{
+    // 次のフォーマット.
+    // mapXXX name("display", srgb) = default;
+    auto srgb = false;
+
+    auto name = std::string(m_Tokenizer.NextAsChar());
+    m_Tokenizer.Next();
+    assert(m_Tokenizer.Compare("("));
+    auto display_tag = std::string(m_Tokenizer.NextAsChar());
+
+    m_Tokenizer.Next();
+    if (!m_Tokenizer.Compare(")"))
+    {
+        srgb = m_Tokenizer.GetAsBool();
+        m_Tokenizer.Next();
+    }
+    assert(m_Tokenizer.Compare(")"));
+
+    m_Tokenizer.Next();
+    assert(m_Tokenizer.Compare("="));
+
+    auto defValue = std::string(m_Tokenizer.NextAsChar());
+    m_Tokenizer.Next();
+    assert(m_Tokenizer.Compare(";"));
+    m_Tokenizer.Next();
+
+    TextureProperty prop;
+    prop.Name           = name;
+    prop.DisplayTag     = display_tag;
+    prop.Type           = type;
+    prop.SRGB           = srgb;
+    prop.DefaultValue   = defValue;
+
+    if (m_TextureProperties.find(prop.Name) == m_TextureProperties.end())
+    { m_TextureProperties[prop.Name] = prop; }
+}
+
+//-----------------------------------------------------------------------------
 //      リソースを解析します.
 //-----------------------------------------------------------------------------
 void FxParser::ParseResource()
@@ -2487,26 +3210,27 @@ SHADER_TYPE FxParser::GetShaderType()
 //-------------------------------------------------------------------------------------------------
 //      バリエーション情報を書き出します.
 //-------------------------------------------------------------------------------------------------
-bool FxParser::WriteVariationInfo(const char* filename)
+bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
 {
     FILE* pFile;
 
-    auto err = fopen_s(&pFile, filename, "w");
+    auto err = fopen_s(&pFile, xmlpath, "w");
     if ( err != 0 )
     {
-        ELOG( "Error : File Open Failed. filename = %s", filename );
+        ELOG( "Error : File Open Failed. filename = %s", xmlpath );
         return false;
     }
 
     fprintf_s(pFile, u8"<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
     fprintf_s(pFile, u8"<root>\n");
-    fprintf_s(pFile, u8"    <source path=\"%s\" />\n", filename);
+    fprintf_s(pFile, u8"    <source path=\"%s\" />\n", hlslpath);
 
     if (!m_RasterizerStates.empty())
     {
         for(auto& itr : m_RasterizerStates)
         {
             fprintf_s(pFile, u8"    <rasterizer_state name=\"%s\" ", itr.first.c_str());
+            // TODO
             fprintf_s(pFile, u8"    </rasterizer_state>\n");
         }
     }
@@ -2516,6 +3240,7 @@ bool FxParser::WriteVariationInfo(const char* filename)
         for(auto& itr : m_DepthStencilStates)
         {
             fprintf_s(pFile, u8"    <depthsencil_state name=\"%s\" ", itr.first.c_str());
+            // TODO
             fprintf_s(pFile, u8"    </depthstencil_state>\n");
         }
     }
@@ -2525,8 +3250,196 @@ bool FxParser::WriteVariationInfo(const char* filename)
         for(auto& itr : m_BlendStates)
         {
             fprintf_s(pFile, u8"    <blend_state name=\"%s\" ", itr.first.c_str());
+            // TODO
             fprintf_s(pFile, u8"    </blend_state>\n");
         }
+    }
+
+    if (!m_ValueProperties.empty() || !m_TextureProperties.empty())
+    {
+        fprintf_s(pFile, u8"    <properties>\n");
+        for(auto& itr : m_ValueProperties)
+        {
+            auto& prop = itr.second;
+            switch(prop.Type)
+            {
+            case PROPERTY_TYPE_BOOL:
+                {
+                    fprintf_s(pFile, u8"        <bool name=\"%s\" display_tag=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.DefaultValue0.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_INT:
+                {
+                    fprintf_s(pFile, u8"        <int name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        std::to_string(prop.Step).c_str(),
+                        std::to_string(prop.Min).c_str(),
+                        std::to_string(prop.Max).c_str(),
+                        prop.DefaultValue0.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT:
+                {
+                    fprintf_s(pFile, u8"        <float name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        std::to_string(prop.Step).c_str(),
+                        std::to_string(prop.Min).c_str(),
+                        std::to_string(prop.Max).c_str(),
+                        prop.DefaultValue0.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT2:
+                {
+                    fprintf_s(pFile, u8"        <float2 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        std::to_string(prop.Step).c_str(),
+                        std::to_string(prop.Min).c_str(),
+                        std::to_string(prop.Max).c_str(),
+                        prop.DefaultValue0.c_str(),
+                        prop.DefaultValue1.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT3:
+                {
+                    fprintf_s(pFile, u8"        <float3 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" z=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        std::to_string(prop.Step).c_str(),
+                        std::to_string(prop.Min).c_str(),
+                        std::to_string(prop.Max).c_str(),
+                        prop.DefaultValue0.c_str(),
+                        prop.DefaultValue1.c_str(),
+                        prop.DefaultValue2.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_FLOAT4:
+                {
+                    fprintf_s(pFile, u8"        <float4 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" z=\"%s\" w=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        std::to_string(prop.Step).c_str(),
+                        std::to_string(prop.Min).c_str(),
+                        std::to_string(prop.Max).c_str(),
+                        prop.DefaultValue0.c_str(),
+                        prop.DefaultValue1.c_str(),
+                        prop.DefaultValue2.c_str(),
+                        prop.DefaultValue3.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_COLOR3:
+                {
+                    fprintf_s(pFile, u8"        <color3 name=\"%s\" display_tag=\"%s\" r=\"%s\" g=\"%s\" b=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.DefaultValue0.c_str(),
+                        prop.DefaultValue1.c_str(),
+                        prop.DefaultValue2.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_COLOR4:
+                {
+                    fprintf_s(pFile, u8"        <color4 name=\"%s\" display_tag=\"%s\" r=\"%s\" g=\"%s\" b=\"%s\" a=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.DefaultValue0.c_str(),
+                        prop.DefaultValue1.c_str(),
+                        prop.DefaultValue2.c_str(),
+                        prop.DefaultValue3.c_str());
+                }
+                break;
+            }
+        }
+
+        for(auto& itr : m_TextureProperties)
+        {
+            auto& prop = itr.second;
+            switch(prop.Type)
+            {
+            case PROPERTY_TYPE_TEXTURE1D:
+                {
+                    fprintf_s(pFile, u8"        <map1d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE1D_ARRAY:
+                {
+                    fprintf_s(pFile, u8"        <map1darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE2D:
+                {
+                    fprintf_s(pFile, u8"        <map2d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE2D_ARRAY:
+                {
+                    fprintf_s(pFile, u8"        <map2darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURE3D:
+                {
+                    fprintf_s(pFile, u8"        <map3d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURECUBE:
+                {
+                    fprintf_s(pFile, u8"        <mapcube name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+
+            case PROPERTY_TYPE_TEXTURECUBE_ARRAY:
+                {
+                    fprintf_s(pFile, u8"        <mapcubearray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
+                        prop.Name.c_str(),
+                        prop.DisplayTag.c_str(),
+                        prop.SRGB ? "true" : "false",
+                        prop.DefaultValue.c_str());
+                }
+                break;
+            }
+        }
+        fprintf_s(pFile, u8"    </properties>\n\n");
     }
 
     for(size_t i=0; i<m_Technieues.size(); ++i)
@@ -2561,7 +3474,7 @@ bool FxParser::WriteVariationInfo(const char* filename)
             fprintf_s(pFile, u8"        </pass>\n");
         }
 
-        fprintf_s(pFile, u8"    </technique>\n");
+        fprintf_s(pFile, u8"    </technique>\n\n");
     }
 
     fprintf_s(pFile, u8"</root>\n");
