@@ -78,8 +78,8 @@ enum MIPMAP_MODE
 ///////////////////////////////////////////////////////////////////////////////
 enum ADDRESS_MODE
 {
-    ADDRESS_MODE_CLAMP,
     ADDRESS_MODE_WRAP,
+    ADDRESS_MODE_CLAMP,
     ADDRESS_MODE_MIRROR,
     ADDRESS_MODE_BORDER,
 };

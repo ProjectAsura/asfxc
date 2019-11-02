@@ -57,6 +57,233 @@ const char* ShaderTypeString(SHADER_TYPE value)
     return nullptr;
 }
 
+const char* ToString(POLYGON_MODE mode)
+{
+    switch(mode)
+    {
+    default:
+    case POLYGON_MODE_SOLID:
+        return "solid";
+
+    case POLYGON_MODE_WIREFRAME:
+        return "wireframe";
+    }
+}
+
+const char* ToString(CULL_TYPE type)
+{
+    switch(type)
+    {
+    default:
+    case CULL_TYPE_NONE:
+        return "none";
+
+    case CULL_TYPE_FRONT:
+        return "front";
+
+    case CULL_TYPE_BACK:
+        return "back";
+    }
+}
+
+const char* ToString(BLEND_TYPE type)
+{
+    switch(type)
+    {
+    default:
+    case BLEND_TYPE_ZERO:
+        return "zero";
+
+    case BLEND_TYPE_ONE:
+        return "one";
+
+    case BLEND_TYPE_SRC_COLOR:
+        return "src_color";
+
+    case BLEND_TYPE_INV_SRC_COLOR:
+        return "inv_src_color";
+
+    case BLEND_TYPE_SRC_ALPHA:
+        return "src_alpha";
+
+    case BLEND_TYPE_INV_SRC_ALPHA:
+        return "inv_src_alpha";
+
+    case BLEND_TYPE_DST_ALPHA:
+        return "dst_alpha";
+
+    case BLEND_TYPE_INV_DST_ALPHA:
+        return "inv_dst_alpha";
+
+    case BLEND_TYPE_DST_COLOR:
+        return "dst_color";
+
+    case BLEND_TYPE_INV_DST_COLOR:
+        return "inv_dst_color";
+    }
+}
+
+const char* ToString(FILTER_MODE type)
+{
+    switch(type)
+    {
+    default:
+    case FILTER_MODE_NEAREST:
+        return "nearest";
+
+    case FILTER_MODE_LINEAR:
+        return "linear";
+    }
+}
+
+const char* ToString(MIPMAP_MODE type)
+{
+    switch(type)
+    {
+    default:
+    case MIPMAP_MODE_NEAREST:
+        return "nearest";
+
+    case MIPMAP_MODE_LINEAR:
+        return "linear";
+
+    case MIPMAP_MODE_NONE:
+        return "none";
+    }
+}
+
+const char* ToString(ADDRESS_MODE type)
+{
+    switch(type)
+    {
+    default:
+    case ADDRESS_MODE_WRAP:
+        return "wrap";
+
+    case ADDRESS_MODE_CLAMP:
+        return "clamp";
+
+    case ADDRESS_MODE_MIRROR:
+        return "mirror";
+
+    case ADDRESS_MODE_BORDER:
+        return "border";
+    }
+}
+
+const char* ToString(BORDER_COLOR type)
+{
+    switch(type)
+    {
+    default:
+    case BORDER_COLOR_TRANSPARENT_BLACK:
+        return "transparent_black";
+
+    case BORDER_COLOR_OPAQUE_BLACK:
+        return "opaque_black";
+
+    case BORDER_COLOR_OPAQUE_WHITE:
+        return "opaque_white";
+    }
+}
+
+const char* ToString(COMPARE_TYPE type)
+{
+    switch(type)
+    {
+    default:
+    case COMPARE_TYPE_NEVER:
+        return "never";
+
+    case COMPARE_TYPE_LESS:
+        return "less";
+
+    case COMPARE_TYPE_EQUAL:
+        return "equal";
+
+    case COMPARE_TYPE_LEQUAL:
+        return "less_equal";
+
+    case COMPARE_TYPE_GREATER:
+        return "greater";
+
+    case COMPARE_TYPE_NEQUAL:
+        return "not_equal";
+
+    case COMPARE_TYPE_GEQUAL:
+        return "greater_equal";
+
+    case COMPARE_TYPE_ALWAYS:
+        return "always";
+    }
+}
+
+const char* ToString(STENCIL_OP_TYPE type)
+{
+    switch(type)
+    {
+    default:
+    case STENCIL_OP_KEEP:
+        return "keep";
+
+    case STENCIL_OP_ZERO:
+        return "zero";
+
+    case STENCIL_OP_REPLACE:
+        return "replace";
+
+    case STENCIL_OP_INCR_SAT:
+        return "incr_sat";
+
+    case STENCIL_OP_DECR_SAT:
+        return "decr_sat";
+
+    case STENCIL_OP_INVERT:
+        return "invert";
+
+    case STENCIL_OP_INCR:
+        return "incr";
+
+    case STENCIL_OP_DECR:
+        return "decr";
+    }
+}
+
+const char* ToString(DEPTH_WRITE_MASK type)
+{
+    switch(type)
+    {
+    default:
+    case DEPTH_WRITE_MASK_ZERO:
+        return "zero";
+
+    case DEPTH_WRITE_MASK_ALL:
+        return "all";
+    }
+}
+
+const char* ToString(BLEND_OP_TYPE type)
+{
+    switch(type)
+    {
+    default:
+    case BLEND_OP_TYPE_ADD:
+        return "add";
+
+    case BLEND_OP_TYPE_SUB:
+        return "sub";
+
+    case BLEND_OP_TYPE_REV_SUB:
+        return "rev_sub";
+
+    case BLEND_OP_TYPE_MIN:
+        return "min";
+
+    case BLEND_OP_TYPE_MAX:
+        return "max";
+    }
+}
+
 //-----------------------------------------------------------------------------
 //      POLYGON_MODE型を解析します.
 //-----------------------------------------------------------------------------
@@ -3229,9 +3456,16 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
     {
         for(auto& itr : m_RasterizerStates)
         {
+            auto& state = itr.second;
             fprintf_s(pFile, u8"    <rasterizer_state name=\"%s\" ", itr.first.c_str());
-            // TODO
-            fprintf_s(pFile, u8"    </rasterizer_state>\n");
+            fprintf_s(pFile, u8"polygon_mode=\"%s\" ", ToString(state.PolygonMode));
+            fprintf_s(pFile, u8"cull_mode=\"%s\" ", ToString(state.CullMode));
+            fprintf_s(pFile, u8"front_ccw=\"%s\" ", state.FrontCCW ? "true" : "false");
+            fprintf_s(pFile, u8"depth_bias=\"%s\" ", std::to_string(state.DepthBias).c_str());
+            fprintf_s(pFile, u8"depth_bias_clamp=\"%s\" ", std::to_string(state.DepthBiasClamp).c_str());
+            fprintf_s(pFile, u8"depth_clip_enable=\"%s\" ", state.DepthClipEnable ? "true" : "false");
+            fprintf_s(pFile, u8"enable_consevative_raster=\"%s\" ", state.EnableConservativeRaster ? "true" : "false");
+            fprintf_s(pFile, u8"/>\n");
         }
     }
 
@@ -3239,9 +3473,22 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
     {
         for(auto& itr : m_DepthStencilStates)
         {
+            auto& state = itr.second;
             fprintf_s(pFile, u8"    <depthsencil_state name=\"%s\" ", itr.first.c_str());
-            // TODO
-            fprintf_s(pFile, u8"    </depthstencil_state>\n");
+            fprintf_s(pFile, u8"depth_enable=\"%s\" ", state.DepthEnable ? "true" : "false");
+            fprintf_s(pFile, u8"depth_write_mask=\"%s\" ", ToString(state.DepthWriteMask));
+            fprintf_s(pFile, u8"depth_func=\"%s\" ", ToString(state.DepthFunc));
+            fprintf_s(pFile, u8"stencil_enable=\"%s\" ", state.StencilEnable ? "true" : "false");
+            fprintf_s(pFile, u8"stencil_read_mask=\"0x%x\" ", state.StencilReadMask);
+            fprintf_s(pFile, u8"stencil_write_mask=\"0x%x\" ", state.StencilWriteMask);
+            fprintf_s(pFile, u8"front_face_stencil_fail=\"%s\" ", ToString(state.FrontFaceStencilFail));
+            fprintf_s(pFile, u8"front_face_stencil_depth_fail=\"%s\" ", ToString(state.FrontFaceStencilDepthFail));
+            fprintf_s(pFile, u8"front_face_stencil_pass=\"%s\" ", ToString(state.FrontFaceStencilPass));
+            fprintf_s(pFile, u8"back_face_stencil_fail=\"%s\" ", ToString(state.BackFaceStencilFail));
+            fprintf_s(pFile, u8"back_face_stencil_depth_fail=\"%s\" ", ToString(state.BackFaceStencilDepthFail));
+            fprintf_s(pFile, u8"back_face_stencil_pass=\"%s\" ", ToString(state.BackFaceStencilPass));
+            fprintf_s(pFile, u8"back_face_stencil_func=\"%s\" ", ToString(state.BackFaceStencilFunc));
+            fprintf_s(pFile, u8"/>\n");
         }
     }
 
@@ -3249,9 +3496,18 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
     {
         for(auto& itr : m_BlendStates)
         {
+            auto& state = itr.second;
             fprintf_s(pFile, u8"    <blend_state name=\"%s\" ", itr.first.c_str());
-            // TODO
-            fprintf_s(pFile, u8"    </blend_state>\n");
+            fprintf_s(pFile, u8"alpha_to_coverage_enable=\"%s\" ", state.AlphaToCoverageEnable ? "true" : "false");
+            fprintf_s(pFile, u8"blend_enable=\"%s\" ", state.BlendEnable ? "true" : "false");
+            fprintf_s(pFile, u8"src_blend=\"%s\" ", ToString(state.SrcBlend));
+            fprintf_s(pFile, u8"dst_blend=\"%s\" ", ToString(state.DstBlend));
+            fprintf_s(pFile, u8"blend_op=\"%s\" ", ToString(state.BlendOp));
+            fprintf_s(pFile, u8"src_blend_alpha=\"%s\" ", ToString(state.SrcBlendAlpha));
+            fprintf_s(pFile, u8"dst_blend_alpha=\"%s\" ", ToString(state.DstBlendAlpha));
+            fprintf_s(pFile, u8"blend_op_alpha=\"%s\" ", ToString(state.BlendOpAlpha));
+            fprintf_s(pFile, u8"render_target_write_mask=\"0x%x\" ", state.RenderTargetWriteMask);
+            fprintf_s(pFile, u8"/>\n");
         }
     }
 
