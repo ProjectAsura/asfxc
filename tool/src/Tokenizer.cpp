@@ -24,6 +24,7 @@ Tokenizer::Tokenizer()
 , m_pToken      (nullptr)
 , m_Separator   ()
 , m_CutOff      ()
+, m_BufferSize  (0)
 { /* DO_NOTHING */ }
 
 //-----------------------------------------------------------------------------
@@ -57,10 +58,12 @@ void Tokenizer::Term()
         m_pToken = nullptr;
     }
 
-    m_Separator.clear();
-    m_CutOff.clear();
-    m_pPtr      = nullptr;
-    m_pBuffer   = nullptr;
+    m_Separator .clear();
+    m_CutOff    .clear();
+
+    m_pPtr          = nullptr;
+    m_pBuffer       = nullptr;
+    m_BufferSize    = 0;
 }
 
 //-----------------------------------------------------------------------------

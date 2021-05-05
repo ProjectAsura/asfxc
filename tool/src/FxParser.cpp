@@ -52,6 +52,12 @@ const char* ShaderTypeString(SHADER_TYPE value)
 
         case SHADER_TYPE_COMPUTE:
             return "compute";
+
+        case SHADER_TYPE_AMPLIFICATION:
+            return "amplification";
+
+        case SHADER_TYPE_MESH:
+            return "mesh";
     }
 
     return nullptr;
@@ -650,7 +656,10 @@ bool FxParser::Parse(const char* filename)
          || m_Tokenizer.CompareAsLower("geometryshader")
          || m_Tokenizer.CompareAsLower("domainshader")
          || m_Tokenizer.CompareAsLower("hullshader") 
-         || m_Tokenizer.CompareAsLower("computeshader"))
+         || m_Tokenizer.CompareAsLower("computeshader")
+         || m_Tokenizer.CompareAsLower("amplificationshader")
+         || m_Tokenizer.CompareAsLower("meshshader")
+        )
         {
             output = false;
             ParseShader();
@@ -783,7 +792,7 @@ void FxParser::ParseShader()
     if (m_Tokenizer.Compare("="))
     {
         // 適当な変数名を付ける.
-        char name[256];
+        char name[256] = {};
         sprintf_s(name, "Shader_%d", m_ShaderCounter);
         variable = name;
 
@@ -922,7 +931,7 @@ void FxParser::ParsePass(Technique& technique)
             if (itr != m_RasterizerStates.end())
             {
                 // 発見できたら，パスにステートを登録.
-                pass.RS = itr->first;
+                pass.RasterizerState = itr->first;
             }
         }
         else if (m_Tokenizer.CompareAsLower("DepthStencilState"))
@@ -941,7 +950,7 @@ void FxParser::ParsePass(Technique& technique)
             if (itr != m_DepthStencilStates.end())
             {
                 // 発見できたら，パスにステートを登録.
-                pass.DSS = itr->first;
+                pass.DepthStencilState = itr->first;
             }
         }
         else if (m_Tokenizer.CompareAsLower("BlendState"))
@@ -960,7 +969,7 @@ void FxParser::ParsePass(Technique& technique)
             if (itr != m_BlendStates.end())
             {
                 // 発見できたら，パスにステートを登録.
-                pass.BS = itr->first;
+                pass.BlendState = itr->first;
             }
         }
         // シェーダデータ.
@@ -970,7 +979,9 @@ void FxParser::ParsePass(Technique& technique)
          || m_Tokenizer.CompareAsLower("GeometryShader")
          || m_Tokenizer.CompareAsLower("DomainShader")
          || m_Tokenizer.CompareAsLower("HullShader")
-         || m_Tokenizer.CompareAsLower("ComputeShader"))
+         || m_Tokenizer.CompareAsLower("ComputeShader")
+         || m_Tokenizer.CompareAsLower("AmplificationShader")
+         || m_Tokenizer.CompareAsLower("MeshShader"))
         {
             // シェーダタイプを取得.
             Shader shader = {};
@@ -2535,8 +2546,8 @@ void FxParser::ParseProperties()
             prop.Max            = 0.0f;
             prop.DefaultValue0  = defValue;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("int"))
         {
@@ -2581,8 +2592,8 @@ void FxParser::ParseProperties()
             prop.Max            = maxi;
             prop.DefaultValue0  = defValue;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("float"))
         {
@@ -2629,8 +2640,8 @@ void FxParser::ParseProperties()
             prop.Max            = maxi;
             prop.DefaultValue0  = defValue;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("float2"))
         {
@@ -2684,8 +2695,8 @@ void FxParser::ParseProperties()
             prop.DefaultValue0  = defValueX;
             prop.DefaultValue1  = defValueY;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("float3"))
         {
@@ -2741,8 +2752,8 @@ void FxParser::ParseProperties()
             prop.DefaultValue1  = defValueY;
             prop.DefaultValue2  = defValueZ;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("float4"))
         {
@@ -2801,8 +2812,8 @@ void FxParser::ParseProperties()
             prop.DefaultValue2  = defValueZ;
             prop.DefaultValue3  = defValueW;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("color3"))
         {
@@ -2843,8 +2854,8 @@ void FxParser::ParseProperties()
             prop.DefaultValue1  = defValueY;
             prop.DefaultValue2  = defValueZ;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("color4"))
         {
@@ -2887,8 +2898,8 @@ void FxParser::ParseProperties()
             prop.DefaultValue2  = defValueZ;
             prop.DefaultValue3  = defValueW;
 
-            if (m_ValueProperties.find(prop.Name) == m_ValueProperties.end())
-            { m_ValueProperties[prop.Name] = prop; }
+            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
+            { m_Properties.Values[prop.Name] = prop; }
         }
         else if (m_Tokenizer.CompareAsLower("map1d"))
         {
@@ -2924,12 +2935,12 @@ void FxParser::ParseProperties()
         }
     }
 
-    if (!m_ValueProperties.empty())
+    if (!m_Properties.Values.empty())
     {
         m_SourceCode += "cbuffer CbProperties\n";
         m_SourceCode += "{\n";
 
-        for(auto& itr : m_ValueProperties)
+        for(auto& itr : m_Properties.Values)
         {
             auto& prop = itr.second;
             m_SourceCode += "    ";
@@ -3036,9 +3047,9 @@ void FxParser::ParseProperties()
         m_SourceCode += "};\n\n";
     }
 
-    if (!m_TextureProperties.empty())
+    if (!m_Properties.Textures.empty())
     {
-        for(auto& itr : m_TextureProperties)
+        for(auto& itr : m_Properties.Textures)
         {
             auto& prop = itr.second;
             switch(prop.Type)
@@ -3159,11 +3170,11 @@ void FxParser::ParseTextureProperty(PROPERTY_TYPE type)
     prop.Name           = name;
     prop.DisplayTag     = display_tag;
     prop.Type           = type;
-    prop.SRGB           = srgb;
+    prop.EnableSRGB     = srgb;
     prop.DefaultValue   = defValue;
 
-    if (m_TextureProperties.find(prop.Name) == m_TextureProperties.end())
-    { m_TextureProperties[prop.Name] = prop; }
+    if (m_Properties.Textures.find(prop.Name) == m_Properties.Textures.end())
+    { m_Properties.Textures[prop.Name] = prop; }
 }
 
 //-----------------------------------------------------------------------------
@@ -3430,13 +3441,21 @@ SHADER_TYPE FxParser::GetShaderType()
     {
         type = SHADER_TYPE_COMPUTE;
     }
+    else if (m_Tokenizer.CompareAsLower("amplificationshader"))
+    {
+        type = SHADER_TYPE_AMPLIFICATION;
+    }
+    else if (m_Tokenizer.CompareAsLower("meshshader"))
+    {
+        type = SHADER_TYPE_MESH;
+    }
 
     return type;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      バリエーション情報を書き出します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
 {
     FILE* pFile;
@@ -3511,10 +3530,10 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
         }
     }
 
-    if (!m_ValueProperties.empty() || !m_TextureProperties.empty())
+    if (!m_Properties.Values.empty() || !m_Properties.Textures.empty())
     {
         fprintf_s(pFile, u8"    <properties>\n");
-        for(auto& itr : m_ValueProperties)
+        for(auto& itr : m_Properties.Values)
         {
             auto& prop = itr.second;
             switch(prop.Type)
@@ -3619,7 +3638,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
             }
         }
 
-        for(auto& itr : m_TextureProperties)
+        for(auto& itr : m_Properties.Textures)
         {
             auto& prop = itr.second;
             switch(prop.Type)
@@ -3629,7 +3648,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <map1d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3639,7 +3658,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <map1darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3649,7 +3668,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <map2d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3659,7 +3678,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <map2darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3669,7 +3688,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <map3d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3679,7 +3698,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <mapcube name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3689,7 +3708,7 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                     fprintf_s(pFile, u8"        <mapcubearray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
                         prop.Name.c_str(),
                         prop.DisplayTag.c_str(),
-                        prop.SRGB ? "true" : "false",
+                        prop.EnableSRGB ? "true" : "false",
                         prop.DefaultValue.c_str());
                 }
                 break;
@@ -3714,17 +3733,17 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
                 auto& shader = pass.Shaders[k];
                 fprintf_s(pFile, u8"            <shader type=\"%s\" profile=\"%s\" name=\"%s\"/>\n", ShaderTypeString(shader.Type), shader.Profile.c_str(), shader.EntryPoint.c_str());
             }
-            if (!pass.RS.empty())
+            if (!pass.RasterizerState.empty())
             {
-                fprintf_s(pFile, u8"            <rs name=\"%s\"/>\n", pass.RS.c_str());
+                fprintf_s(pFile, u8"            <rs name=\"%s\"/>\n", pass.RasterizerState.c_str());
             }
-            if (!pass.DSS.empty())
+            if (!pass.DepthStencilState.empty())
             {
-                fprintf_s(pFile, u8"            <dss name=\"%s\"/>\n", pass.DSS.c_str());
+                fprintf_s(pFile, u8"            <dss name=\"%s\"/>\n", pass.DepthStencilState.c_str());
             }
-            if (!pass.BS.empty())
+            if (!pass.BlendState.empty())
             {
-                fprintf_s(pFile, u8"            <bs name=\"%s\"/>\n", pass.BS.c_str());
+                fprintf_s(pFile, u8"            <bs name=\"%s\"/>\n", pass.BlendState.c_str());
             }
 
             fprintf_s(pFile, u8"        </pass>\n");
@@ -3739,9 +3758,9 @@ bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
     return true;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      ソースコードを出力します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 bool FxParser::WriteSourceCode(const char* filename)
 {
     FILE* pFile;
@@ -3812,5 +3831,11 @@ const std::map<std::string, Resource>& FxParser::GetResources() const
 //-----------------------------------------------------------------------------
 const std::vector<Technique>& FxParser::GetTechniques() const
 { return m_Technieues; }
+
+//-----------------------------------------------------------------------------
+//      プロパティを取得します.
+//-----------------------------------------------------------------------------
+const Properties& FxParser::GetProperties() const
+{ return m_Properties; }
 
 } // namespace asura

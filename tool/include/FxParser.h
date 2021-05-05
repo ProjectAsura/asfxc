@@ -20,12 +20,14 @@ namespace asura {
 ///////////////////////////////////////////////////////////////////////////////
 enum SHADER_TYPE
 {
-    SHADER_TYPE_VERTEX = 0,
-    SHADER_TYPE_DOMAIN,
-    SHADER_TYPE_GEOMETRY,
-    SHADER_TYPE_HULL,
-    SHADER_TYPE_PIXEL,
-    SHADER_TYPE_COMPUTE
+    SHADER_TYPE_VERTEX = 0,         //!< 頂点シェーダ.
+    SHADER_TYPE_DOMAIN,             //!< ドメインシェーダ.
+    SHADER_TYPE_GEOMETRY,           //!< ジオメトリシェーダ.
+    SHADER_TYPE_HULL,               //!< ハルシェーダ.
+    SHADER_TYPE_PIXEL,              //!< ピクセルシェーダ.
+    SHADER_TYPE_COMPUTE,            //!< コンピュートシェーダ.
+    SHADER_TYPE_AMPLIFICATION,      //!< 増幅シェーダ.
+    SHADER_TYPE_MESH,               //!< メッシュシェーダ.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -33,8 +35,8 @@ enum SHADER_TYPE
 ///////////////////////////////////////////////////////////////////////////////
 enum POLYGON_MODE
 {
-    POLYGON_MODE_WIREFRAME = 0,
-    POLYGON_MODE_SOLID,
+    POLYGON_MODE_WIREFRAME = 0,     //!< ワイヤーフレーム.
+    POLYGON_MODE_SOLID,             //!< ポリゴン.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,16 +44,16 @@ enum POLYGON_MODE
 ///////////////////////////////////////////////////////////////////////////////
 enum BLEND_TYPE
 {
-    BLEND_TYPE_ZERO,
-    BLEND_TYPE_ONE,
-    BLEND_TYPE_SRC_COLOR,
-    BLEND_TYPE_INV_SRC_COLOR,
-    BLEND_TYPE_SRC_ALPHA,
-    BLEND_TYPE_INV_SRC_ALPHA,
-    BLEND_TYPE_DST_ALPHA,
-    BLEND_TYPE_INV_DST_ALPHA,
-    BLEND_TYPE_DST_COLOR,
-    BLEND_TYPE_INV_DST_COLOR,
+    BLEND_TYPE_ZERO,                //!< (0, 0, 0)
+    BLEND_TYPE_ONE,                 //!< (1, 1, 1)
+    BLEND_TYPE_SRC_COLOR,           //!< (src_r, src_g, src_b)
+    BLEND_TYPE_INV_SRC_COLOR,       //!< (1-src_r, 1-src_g, 1-src_b).
+    BLEND_TYPE_SRC_ALPHA,           //!< src_a
+    BLEND_TYPE_INV_SRC_ALPHA,       //!< 1-src_a
+    BLEND_TYPE_DST_ALPHA,           //!< dst_a
+    BLEND_TYPE_INV_DST_ALPHA,       //!< 1-dst_a
+    BLEND_TYPE_DST_COLOR,           //!< (dst_r, dst_r, dst_b)
+    BLEND_TYPE_INV_DST_COLOR,       //!< (1-dst_r, 1-dst_g, 1-dst_b)
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -389,10 +391,10 @@ struct BlendState
 ///////////////////////////////////////////////////////////////////////////////
 struct Member
 {
-    std::string     Name;
-    MEMBER_TYPE     Type;
-    TYPE_MODIFIER   Modifier;
-    uint32_t        PackOffset;
+    std::string     Name;                   //!< メンバー名です.
+    MEMBER_TYPE     Type;                   //!< データ型です.
+    TYPE_MODIFIER   Modifier;               //!< 修飾子です.
+    uint32_t        PackOffset;             //!< パックオフセットです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -400,9 +402,9 @@ struct Member
 ///////////////////////////////////////////////////////////////////////////////
 struct ConstantBuffer
 {
-    std::string             Name;
-    uint32_t                Register;
-    std::vector<Member>     Members;
+    std::string             Name;           //!< 定数バッファ名です.
+    uint32_t                Register;       //!< レジスタ番号です.
+    std::vector<Member>     Members;        //!< メンバーです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -410,8 +412,8 @@ struct ConstantBuffer
 ///////////////////////////////////////////////////////////////////////////////
 struct Structure
 {
-    std::string             Name;
-    std::vector<Member>     Members;
+    std::string             Name;           //!< 構造体名です.
+    std::vector<Member>     Members;        //!< メンバー変数です.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -419,16 +421,16 @@ struct Structure
 ///////////////////////////////////////////////////////////////////////////////
 struct ValueProperty
 {
-    std::string         Name;
-    std::string         DisplayTag;
-    PROPERTY_TYPE       Type;
-    float               Min;
-    float               Max;
-    float               Step;
-    std::string         DefaultValue0;
-    std::string         DefaultValue1;
-    std::string         DefaultValue2;
-    std::string         DefaultValue3;
+    std::string         Name;               //!< 変数名です.
+    std::string         DisplayTag;         //!< UI表示名です.
+    PROPERTY_TYPE       Type;               //!< データ型です.
+    float               Min;                //!< 最小値です.
+    float               Max;                //!< 最大値です.
+    float               Step;               //!< 値を増やす量です.
+    std::string         DefaultValue0;      //!< 要素0のデフォルト値です.
+    std::string         DefaultValue1;      //!< 要素1のデフォルト値です.
+    std::string         DefaultValue2;      //!< 要素2のデフォルト値です.
+    std::string         DefaultValue3;      //!< 要素3のデフォルト値です.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -436,11 +438,20 @@ struct ValueProperty
 ///////////////////////////////////////////////////////////////////////////////
 struct TextureProperty
 {
-    std::string         Name;
-    std::string         DisplayTag;
-    PROPERTY_TYPE       Type;
-    bool                SRGB;
-    std::string         DefaultValue;
+    std::string         Name;               //!< 変数名です.
+    std::string         DisplayTag;         //!< UI表示名です.
+    PROPERTY_TYPE       Type;               //!< データ型です.
+    bool                EnableSRGB;         //!< sRGBを有効にする場合は true を指定.
+    std::string         DefaultValue;       //!< デフォルト値(文字列の解釈は使用者に委ねられます).
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Properties
+///////////////////////////////////////////////////////////////////////////////
+struct Properties
+{
+    std::map<std::string, ValueProperty>    Values;     //!< 値です.
+    std::map<std::string, TextureProperty>  Textures;   //!< テクスチャです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -448,10 +459,10 @@ struct TextureProperty
 ///////////////////////////////////////////////////////////////////////////////
 struct Resource
 {
-    std::string         Name;
-    RESOURCE_TYPE       ResourceType;
-    MEMBER_TYPE         DataType;
-    uint32_t            Register;
+    std::string         Name;               //!< リソース名です.   
+    RESOURCE_TYPE       ResourceType;       //!< リソースタイプです. 
+    MEMBER_TYPE         DataType;           //!< データ型です.
+    uint32_t            Register;           //!< レジスタ番号です.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -459,11 +470,11 @@ struct Resource
 ///////////////////////////////////////////////////////////////////////////////
 struct Pass
 {
-    std::string                 Name;           //!< パス名です.
-    std::vector<Shader>         Shaders;        //!< シェーダデータです.
-    std::string                 RS;             //!< ラスタライザーステートです.
-    std::string                 DSS;            //!< 深度ステンシルステートです.
-    std::string                 BS;             //!< ブレンドステートです.
+    std::string                 Name;               //!< パス名です.
+    std::vector<Shader>         Shaders;            //!< シェーダデータです.
+    std::string                 RasterizerState;    //!< ラスタライザーステートです.
+    std::string                 DepthStencilState;  //!< 深度ステンシルステートです.
+    std::string                 BlendState;         //!< ブレンドステートです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -495,23 +506,118 @@ public:
     // public methods.
     //========================================================================
 
+    //------------------------------------------------------------------------
+    //! @brief      コンストラクタです.
+    //------------------------------------------------------------------------
     FxParser ();
+
+    //------------------------------------------------------------------------
+    //! @brief      デストラクタです.
+    //------------------------------------------------------------------------
     ~FxParser();
 
+    //------------------------------------------------------------------------
+    //! @brief      解析結果をクリアします.
+    //------------------------------------------------------------------------
     void Clear();
+
+    //------------------------------------------------------------------------
+    //! @brief      解析処理を行ないます.
+    //! 
+    //! @param[in]      filename        ファイル名
+    //! @retval true    解析に成功.
+    //! @retval false   解析に失敗.
+    //------------------------------------------------------------------------
     bool Parse(const char* filename);
+
+    //------------------------------------------------------------------------
+    //! @brief      XMLにバリエーション情報を書き出します.
+    //! 
+    //! @param[in]      xmlpath     XMLファイルパス
+    //! @param[in]      hlslpath    HLSLファイルパス.
+    //! @retval true    書き出しに成功.
+    //! @retval false   書き出しに失敗.
+    //------------------------------------------------------------------------
     bool WriteVariationInfo(const char* xmlpath, const char* hlslpath);
+
+    //------------------------------------------------------------------------
+    //! @brief      ソースコードを書き出します.
+    //! 
+    //! @param[in]      filename        ファイル名.
+    //! @retval true    書き出しに成功.
+    //! @retval false   書き出しに失敗.
+    //------------------------------------------------------------------------
     bool WriteSourceCode(const char* filename);
 
+    //------------------------------------------------------------------------
+    //! @brief      ソースコードを取得します.
+    //! 
+    //! @return     ソースコードを返却します.
+    //------------------------------------------------------------------------
     const char* GetSourceCode() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      ソースコードサイズを取得します.
+    //! 
+    //! @return     ソースコードサイズを返却します.
+    //------------------------------------------------------------------------
     size_t GetSourceCodeSize() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      ブレンドステートを取得します.
+    //! 
+    //! @return     ブレンドステートを返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, BlendState>& GetBlendStates() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      ラスタライザーステートを取得します.
+    //! 
+    //! @return     ラスタライザーステートを返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, RasterizerState>& GetRasterizerStates() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      深度ステンシルステートを取得します.
+    //! 
+    //! @return     深度ステンシルステートを返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, DepthStencilState>& GetDepthStencilStates() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      定数バッファを取得します.
+    //! 
+    //! @return     定数バッファを返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, ConstantBuffer>& GetConstantBuffers() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      構造体を取得します.
+    //! 
+    //! @return     構造体を返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, Structure>& GetStructures() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      リソースを取得します.
+    //! 
+    //! @return     リソースを返却します.
+    //------------------------------------------------------------------------
     const std::map<std::string, Resource>& GetResources() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      テクニックを取得します.
+    //! 
+    //! @return     テクニックを返却します.
+    //------------------------------------------------------------------------
     const std::vector<Technique>& GetTechniques() const;
+
+    //------------------------------------------------------------------------
+    //! @brief      プロパティを取得します.
+    //! 
+    //! @return     プロパティを返却します.
+    //------------------------------------------------------------------------
+    const Properties& GetProperties() const;
 
 private:
     //========================================================================
@@ -528,8 +634,7 @@ private:
     std::map<std::string, ConstantBuffer>       m_ConstantBuffers;
     std::map<std::string, Structure>            m_Structures;
     std::map<std::string, Resource>             m_Resources;
-    std::map<std::string, ValueProperty>        m_ValueProperties;
-    std::map<std::string, TextureProperty>      m_TextureProperties;
+    Properties                                  m_Properties;
     std::vector<std::string>                    m_Includes;
     std::string                                 m_SourceCode;
     int                                         m_ShaderCounter;
