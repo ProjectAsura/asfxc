@@ -424,6 +424,7 @@ struct ValueProperty
     std::string         Name;               //!< 変数名です.
     std::string         DisplayTag;         //!< UI表示名です.
     PROPERTY_TYPE       Type;               //!< データ型です.
+    uint32_t            Offset;             //!< 先頭からのオフセットです(バイト単位).
     float               Min;                //!< 最小値です.
     float               Max;                //!< 最大値です.
     float               Step;               //!< 値を増やす量です.
@@ -450,6 +451,7 @@ struct TextureProperty
 ///////////////////////////////////////////////////////////////////////////////
 struct Properties
 {
+    uint32_t                                BufferSize; //!< バッファサイズです.
     std::map<std::string, ValueProperty>    Values;     //!< 値です.
     std::map<std::string, TextureProperty>  Textures;   //!< テクスチャです.
 };

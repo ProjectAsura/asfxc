@@ -690,7 +690,7 @@ void FxParser::Clear()
     m_Includes.clear();
     m_Includes.shrink_to_fit();
     m_Expanded.clear();
-    //m_BufferSize    = 0;
+    m_SourceCode.clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -710,6 +710,7 @@ bool FxParser::Parse(const char* filename)
         return false;
     }
 
+    m_SourceCode.clear();
     m_SourceCode.reserve( m_Expanded.size() );
 
     m_Tokenizer.SetSeparator( " \t\r\n,\"" );
@@ -843,6 +844,14 @@ bool FxParser::Parse(const char* filename)
 
         // 次のトークンを取得.
         m_Tokenizer.Next();
+    }
+
+    // 最後が出力されないので追加.
+    {
+        auto ptr = m_Tokenizer.GetPtr();
+        auto size = (ptr - cur);
+        if (size > 0)
+        { m_SourceCode.append(cur, size); }
     }
 
     // 一時データを削除.
@@ -1575,14 +1584,19 @@ void FxParser::ParseConstantBuffer()
     buffer.Register = -1;
 
     m_Tokenizer.Next();
-    if (m_Tokenizer.Compare("register"))
+    if (m_Tokenizer.Compare(":"))
     {
         m_Tokenizer.Next();
+        assert(m_Tokenizer.CompareAsLower("register"));   
+        m_Tokenizer.Next(); // register
+        assert(m_Tokenizer.Compare("("));
+        m_Tokenizer.Next(); // "("
         auto regStr = std::string(m_Tokenizer.GetAsChar());
         auto regNo  = std::stoi(regStr.substr(1));
         buffer.Register = uint32_t(regNo);
-
-        m_Tokenizer.Next();
+        m_Tokenizer.Next(); // bxx
+        assert(m_Tokenizer.Compare(")"));
+        m_Tokenizer.Next(); // ")"
     }
 
     assert(m_Tokenizer.Compare("{"));
@@ -2599,6 +2613,8 @@ void FxParser::ParseProperties()
     int count = 1;
     m_Tokenizer.Next();
 
+    uint32_t bufferSize = 0;
+    uint32_t offset = 0;
 
     while(!m_Tokenizer.IsEnd())
     {
@@ -2638,6 +2654,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_BOOL;
+            prop.Offset         = offset;
             prop.Step           = 0;
             prop.Min            = 0.0f;
             prop.Max            = 0.0f;
@@ -2645,6 +2662,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += sizeof(int); // シェーダ上で bool は 4byteであるため.
         }
         else if (m_Tokenizer.CompareAsLower("int"))
         {
@@ -2684,6 +2703,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_INT;
+            prop.Offset         = offset;
             prop.Step           = step;
             prop.Min            = mini;
             prop.Max            = maxi;
@@ -2691,6 +2711,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += sizeof(int);
         }
         else if (m_Tokenizer.CompareAsLower("float"))
         {
@@ -2732,6 +2754,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_FLOAT;
+            prop.Offset         = offset;
             prop.Step           = step;
             prop.Min            = mini;
             prop.Max            = maxi;
@@ -2739,6 +2762,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += sizeof(float);
         }
         else if (m_Tokenizer.CompareAsLower("float2"))
         {
@@ -2786,6 +2811,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_FLOAT2;
+            prop.Offset         = offset;
             prop.Step           = step;
             prop.Min            = mini;
             prop.Max            = maxi;
@@ -2794,6 +2820,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += (sizeof(float) * 2);
         }
         else if (m_Tokenizer.CompareAsLower("float3"))
         {
@@ -2842,6 +2870,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_FLOAT3;
+            prop.Offset         = offset;
             prop.Step           = step;
             prop.Min            = mini;
             prop.Max            = maxi;
@@ -2851,6 +2880,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += (sizeof(float) * 3);
         }
         else if (m_Tokenizer.CompareAsLower("float4"))
         {
@@ -2901,6 +2932,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_FLOAT4;
+            prop.Offset         = offset;
             prop.Step           = step;
             prop.Min            = mini;
             prop.Max            = maxi;
@@ -2911,6 +2943,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += (sizeof(float) * 4);
         }
         else if (m_Tokenizer.CompareAsLower("color3"))
         {
@@ -2944,6 +2978,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_COLOR3;
+            prop.Offset         = offset;
             prop.Step           = 0.0f;
             prop.Min            = 0.0f;
             prop.Max            = 0.0f;
@@ -2953,6 +2988,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += (sizeof(float) * 3);
         }
         else if (m_Tokenizer.CompareAsLower("color4"))
         {
@@ -2987,6 +3024,7 @@ void FxParser::ParseProperties()
             prop.Name           = name;
             prop.DisplayTag     = display_tag;
             prop.Type           = PROPERTY_TYPE_COLOR4;
+            prop.Offset         = offset;
             prop.Step           = 0.0f;
             prop.Min            = 0.0f;
             prop.Max            = 0.0f;
@@ -2997,6 +3035,8 @@ void FxParser::ParseProperties()
 
             if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
             { m_Properties.Values[prop.Name] = prop; }
+
+            offset += (sizeof(float) * 4);
         }
         else if (m_Tokenizer.CompareAsLower("map1d"))
         {
@@ -3031,6 +3071,8 @@ void FxParser::ParseProperties()
             m_Tokenizer.Next();
         }
     }
+
+    m_Properties.BufferSize = offset;
 
     if (!m_Properties.Values.empty())
     {
@@ -3487,18 +3529,20 @@ void FxParser::ParseResourceDetail(RESOURCE_TYPE type)
     }
 
     m_Tokenizer.Next();
-    assert(m_Tokenizer.Compare(":"));
-    m_Tokenizer.Next();
 
-    if (m_Tokenizer.CompareAsLower("register"))
+    if (m_Tokenizer.Compare(":"))
     {
         m_Tokenizer.Next();
+        assert(m_Tokenizer.CompareAsLower("register"));
+        m_Tokenizer.Next(); // register
         assert(m_Tokenizer.Compare("("));
-        auto reg = std::string(m_Tokenizer.NextAsChar());
+        m_Tokenizer.Next(); // "("
+        auto reg = std::string(m_Tokenizer.GetAsChar());
         auto idx = std::stoi(reg.substr(1));
         res.Register = uint32_t(idx);
-        m_Tokenizer.Next();
+        m_Tokenizer.Next(); // txx
         assert(m_Tokenizer.Compare(")"));
+        m_Tokenizer.Next(); // ")"
     }
 
     if (m_Resources.find(name) == m_Resources.end())
