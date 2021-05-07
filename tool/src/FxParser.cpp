@@ -765,7 +765,15 @@ bool FxParser::Parse(const char* filename)
         // プロパティ.
         else if (m_Tokenizer.CompareAsLower("properties"))
         {
+            auto ptr = m_Tokenizer.GetPtr();
             output = false;
+            auto size = (ptr - cur) - strlen("properties");
+            if (size > 0)
+            {
+                m_SourceCode.append(cur, size);
+                cur = ptr;
+            }
+
             ParseProperties();
         }
         else if (
@@ -2621,6 +2629,9 @@ void FxParser::ParseProperties()
         // ブロック終了.
         if (m_Tokenizer.Compare("}"))
         {
+            m_Tokenizer.Next();
+            assert(m_Tokenizer.Compare(";"));
+            m_Tokenizer.Next();
             count--;
             if (count == 0)
             { break; }
@@ -3076,6 +3087,7 @@ void FxParser::ParseProperties()
 
     if (!m_Properties.Values.empty())
     {
+        //m_SourceCode += "\n";
         m_SourceCode += "cbuffer CbProperties\n";
         m_SourceCode += "{\n";
 
