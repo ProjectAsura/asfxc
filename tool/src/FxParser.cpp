@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <new>
 #include <cassert>
+#include <fstream>
 
 
 #ifndef DLOG
@@ -29,9 +30,9 @@
 namespace asura {
 
 //-----------------------------------------------------------------------------
-//      シェーダタイプ文字列を返却します.
+//      シェーダタイプに対応する文字列を返却します.
 //-----------------------------------------------------------------------------
-const char* ShaderTypeString(SHADER_TYPE value)
+const char* ToString(SHADER_TYPE value)
 {
     switch(value)
     {
@@ -63,6 +64,9 @@ const char* ShaderTypeString(SHADER_TYPE value)
     return nullptr;
 }
 
+//-----------------------------------------------------------------------------
+//      ポリゴンモードに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(POLYGON_MODE mode)
 {
     switch(mode)
@@ -76,6 +80,9 @@ const char* ToString(POLYGON_MODE mode)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      カリングタイプに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(CULL_TYPE type)
 {
     switch(type)
@@ -92,6 +99,9 @@ const char* ToString(CULL_TYPE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      ブレンドタイプに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(BLEND_TYPE type)
 {
     switch(type)
@@ -129,6 +139,9 @@ const char* ToString(BLEND_TYPE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      フィルタモードに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(FILTER_MODE type)
 {
     switch(type)
@@ -142,6 +155,9 @@ const char* ToString(FILTER_MODE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      ミップマップモードに対する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(MIPMAP_MODE type)
 {
     switch(type)
@@ -158,6 +174,9 @@ const char* ToString(MIPMAP_MODE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      アドレスモードに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(ADDRESS_MODE type)
 {
     switch(type)
@@ -177,6 +196,9 @@ const char* ToString(ADDRESS_MODE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      ボーダーカラーに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(BORDER_COLOR type)
 {
     switch(type)
@@ -193,6 +215,9 @@ const char* ToString(BORDER_COLOR type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      コンペアタイプに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(COMPARE_TYPE type)
 {
     switch(type)
@@ -224,6 +249,9 @@ const char* ToString(COMPARE_TYPE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      ステンシル操作タイプに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(STENCIL_OP_TYPE type)
 {
     switch(type)
@@ -255,6 +283,9 @@ const char* ToString(STENCIL_OP_TYPE type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      深度書き込みマスクに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(DEPTH_WRITE_MASK type)
 {
     switch(type)
@@ -268,6 +299,9 @@ const char* ToString(DEPTH_WRITE_MASK type)
     }
 }
 
+//-----------------------------------------------------------------------------
+//      ブレンド操作タイプに対応する文字列を返却します.
+//-----------------------------------------------------------------------------
 const char* ToString(BLEND_OP_TYPE type)
 {
     switch(type)
@@ -509,49 +543,159 @@ BLEND_OP_TYPE ParseBlendOpType(const char* value)
     return result;
 }
 
+//-----------------------------------------------------------------------------
+//      ファイルパスからディレクトリ名を取得します.
+//-----------------------------------------------------------------------------
+std::string GetDirectoryPathA( const char* filePath )
+{
+    // 末尾の\\は取り除いた状態で返却します.
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
+    std::string path = filePath;
+    auto idx = path.find_last_of( "/" );
+    if ( idx != std::string::npos )
+    {
+        auto result = path.substr( 0, idx );
+        return result;
+    }
+
+    idx = path.find_last_of( "\\" );
+    if ( idx != std::string::npos )
+    {
+        auto result = path.substr( 0, idx );
+        return result;
+    }
+
+    return std::string();
+}
+
+//-----------------------------------------------------------------------------
+//      文字列を置換します.
+//-----------------------------------------------------------------------------
+std::string Replace
+(
+    const std::string& input,
+    const std::string& pattern,
+    const std::string& replace
+)
+{
+    std::string result = input;
+    auto pos = result.find(pattern);
+
+    while (pos != std::string::npos)
+    {
+        result.replace(pos, pattern.length(), replace);
+        pos = result.find(pattern, pos + replace.length());
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+//      文字列を置換します.
+//-----------------------------------------------------------------------------
+std::string Replace
+(
+    const std::string& input,
+    const std::string& pattern,
+    const std::string& replace,
+    bool& hit
+)
+{
+    std::string result = input;
+    auto pos = result.find(pattern);
+    hit = false;
+
+    while (pos != std::string::npos)
+    {
+        result.replace(pos, pattern.length(), replace);
+        pos = result.find(pattern, pos + replace.length());
+        hit = true;
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------
+//      ファイルをロードします.
+//-----------------------------------------------------------------------------
+bool LoadFile(const char* filename, std::string& result)
+{
+    FILE* pFile = nullptr;
+    auto err = fopen_s(&pFile, filename, "rb");
+    if (err != 0 || pFile == nullptr)
+    {
+        ELOG("Erorr : File Open Failed. path = %s", filename);
+        return false;
+    }
+
+    auto cur_pos = ftell(pFile);
+    fseek(pFile, 0, SEEK_END);
+    auto end_pos = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+
+    auto size = size_t(end_pos) - size_t(cur_pos);
+    auto pBuffer = new char[size + 1];
+    fread(pBuffer, size, 1, pFile);
+    pBuffer[size] = '\0';
+    fclose(pFile);
+
+    result = pBuffer;
+    delete[] pBuffer;
+
+    return true;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 // FxParser class
-///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      コンストラクタです.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 FxParser::FxParser()
-: m_pBuffer      (nullptr)
-, m_Tokenizer    ()
+: m_Tokenizer    ()
 , m_Technieues   ()
 , m_ShaderCounter(0)
-, m_BufferSize   (0)
 { /* DO_NOTHING */ }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      デストラクタです.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 FxParser::~FxParser()
 { Clear(); }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      クリアします.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void FxParser::Clear()
 {
-    if (m_pBuffer != nullptr)
-    {
-        delete[] m_pBuffer;
-        m_pBuffer = nullptr;
-    }
-
     m_Tokenizer.Term();
     m_Technieues.clear();
     m_Technieues.shrink_to_fit();
+
+    m_Shaders.clear();
+    m_Defines.clear();
+    m_BlendStates.clear();
+    m_RasterizerStates.clear();
+    m_DepthStencilStates.clear();
+    m_ConstantBuffers.clear();
+    m_Structures.clear();
+    m_Resources.clear();
+    m_Properties.Values.clear();
+    m_Properties.Textures.clear();
     m_ShaderCounter = 0;
-    m_BufferSize    = 0;
+    m_DirPaths.clear();
+    m_DirPaths.shrink_to_fit();
+    m_Includes.clear();
+    m_Includes.shrink_to_fit();
+    m_Expanded.clear();
+    //m_BufferSize    = 0;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      解析します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 bool FxParser::Parse(const char* filename)
 {
     if (!Load(filename))
@@ -566,11 +710,11 @@ bool FxParser::Parse(const char* filename)
         return false;
     }
 
-    m_SourceCode.reserve( m_ReadSize );
+    m_SourceCode.reserve( m_Expanded.size() );
 
     m_Tokenizer.SetSeparator( " \t\r\n,\"" );
     m_Tokenizer.SetCutOff( "{}()=#<>;" );
-    m_Tokenizer.SetBuffer( m_pBuffer, m_ReadSize );
+    m_Tokenizer.SetBuffer( const_cast<char*>(m_Expanded.c_str()), m_Expanded.size() );
 
     auto cur = m_Tokenizer.GetBuffer();
 
@@ -701,15 +845,6 @@ bool FxParser::Parse(const char* filename)
         m_Tokenizer.Next();
     }
 
-    // 不要なメモリを解放.
-    if (m_pBuffer != nullptr)
-    {
-        delete[] m_pBuffer;
-        m_pBuffer = nullptr;
-    }
-
-    m_BufferSize = 0;
-
     // 一時データを削除.
     m_Shaders.clear();
 
@@ -719,65 +854,36 @@ bool FxParser::Parse(const char* filename)
     return true;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      ファイルを読み込みます.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 bool FxParser::Load(const char* filename)
 {
-    FILE* pFile = nullptr;
+    auto dir = GetDirectoryPathA(filename);
+    m_DirPaths.push_back(dir);
 
-    // ファイルを開く.
-    auto ret = fopen_s( &pFile, filename, "r" );
-    if ( ret != 0 )
+    // インクルード情報を収集.
+    if (!CorrectIncludes(filename))
+    { return false; }
+
+    for(size_t i=0; i<m_Includes.size(); ++i)
+    { LoadFile(m_Includes[i].FindPath.c_str(), m_Includes[i].Code); }
+
+    if (!LoadFile(filename, m_Expanded))
+    { return false; }
+
+    for(;;)
     {
-        ELOG( "Error : File Open Failed." );
-        return false;
+        if (!Expand(m_Expanded))
+        { break; }
     }
 
-    // ファイルサイズを算出.
-    // ※このファイルサイズ計算は推奨されない方式なので注意!!
-    // https://www.jpcert.or.jp/sc-rules/c-fio19-c.html
-    auto curpos = ftell(pFile);
-    fseek(pFile, 0, SEEK_END);
-    auto endpos = ftell(pFile);
-    fseek(pFile, 0, SEEK_SET);
-
-    m_BufferSize = static_cast<size_t>(endpos - curpos);
-
-    // メモリを確保.
-    m_pBuffer = new(std::nothrow) char[m_BufferSize + 1]; // null終端させるために +1 している.
-    if (m_pBuffer == nullptr)
-    {
-        ELOG( "Error : Out of memory." );
-        fclose(pFile);
-        return false;
-    }
-
-    // null終端になるようゼロクリア.
-    memset(m_pBuffer, 0, m_BufferSize + 1);
-
-    // 一括読み込み.
-    m_ReadSize = fread(m_pBuffer, 1, m_BufferSize, pFile);
-
-    if (m_BufferSize != m_ReadSize)
-    {
-        auto size = m_BufferSize - m_ReadSize;
-        assert(size >= 0);
-
-        // ゴミが入るので，クリアする.
-        memset(m_pBuffer + m_ReadSize, 0, size);
-    }
-
-    // ファイルを閉じる.
-    fclose(pFile);
-
-    // 正常終了.
     return true;
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      シェーダを解析します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void FxParser::ParseShader()
 {
     // シェーダタイプを取得.
@@ -812,7 +918,7 @@ void FxParser::ParseShader()
     assert(m_Tokenizer.Compare("compile"));
 
     // プロファイル名を取得.
-    profile    = std::string(m_Tokenizer.NextAsChar());
+    profile = std::string(m_Tokenizer.NextAsChar());
    
     // エントリーポイント名を取得.
     entryPoint = std::string(m_Tokenizer.NextAsChar());
@@ -842,9 +948,9 @@ void FxParser::ParseShader()
     { m_Shaders[variable] = data; }
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      テクニックを解析します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void FxParser::ParseTechnique()
 {
     m_Tokenizer.Next();
@@ -881,9 +987,9 @@ void FxParser::ParseTechnique()
     m_Technieues.push_back(technique);
 }
 
-//------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      パスを解析します.
-//------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void FxParser::ParsePass(Technique& technique)
 {
     m_Tokenizer.Next();
@@ -1061,9 +1167,9 @@ void FxParser::ParsePass(Technique& technique)
     technique.Pass.push_back(pass);
 }
 
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 //      プリプロセッサを解析します.
-//-------------------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 void FxParser::ParsePreprocessor()
 {
     // 次のトークンを取得.
@@ -1077,7 +1183,6 @@ void FxParser::ParsePreprocessor()
     }
     else if (m_Tokenizer.Compare("elif"))
     {
-        //auto val = std::string(m_Tokenizer.NextAsChar());
     }
     else if (m_Tokenizer.Compare("else"))
     {
@@ -1090,23 +1195,15 @@ void FxParser::ParsePreprocessor()
     }
     else if (m_Tokenizer.Compare("if"))
     {
-        //auto val = std::string(m_Tokenizer.NextAsChar());
     }
     else if (m_Tokenizer.Compare("ifdef"))
     {
-        //auto val = std::string(m_Tokenizer.NextAsChar());
     }
     else if (m_Tokenizer.Compare("ifndef"))
     {
-        //auto val = std::string(m_Tokenizer.NextAsChar());
     }
     else if (m_Tokenizer.Compare("include"))
     {
-        m_Tokenizer.Next();
-        assert(m_Tokenizer.Compare("<"));
-        m_Includes.push_back(m_Tokenizer.NextAsChar());
-        m_Tokenizer.Next();
-        assert(m_Tokenizer.Compare(">"));
     }
     else if (m_Tokenizer.Compare("line"))
     {
@@ -3454,331 +3551,6 @@ SHADER_TYPE FxParser::GetShaderType()
 }
 
 //-----------------------------------------------------------------------------
-//      バリエーション情報を書き出します.
-//-----------------------------------------------------------------------------
-bool FxParser::WriteVariationInfo(const char* xmlpath, const char* hlslpath)
-{
-    FILE* pFile;
-
-    auto err = fopen_s(&pFile, xmlpath, "w");
-    if ( err != 0 )
-    {
-        ELOG( "Error : File Open Failed. filename = %s", xmlpath );
-        return false;
-    }
-
-    fprintf_s(pFile, u8"<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n");
-    fprintf_s(pFile, u8"<root>\n");
-    fprintf_s(pFile, u8"    <source path=\"%s\" />\n", hlslpath);
-
-    if (!m_RasterizerStates.empty())
-    {
-        for(auto& itr : m_RasterizerStates)
-        {
-            auto& state = itr.second;
-            fprintf_s(pFile, u8"    <rasterizer_state name=\"%s\" ", itr.first.c_str());
-            fprintf_s(pFile, u8"polygon_mode=\"%s\" ", ToString(state.PolygonMode));
-            fprintf_s(pFile, u8"cull_mode=\"%s\" ", ToString(state.CullMode));
-            fprintf_s(pFile, u8"front_ccw=\"%s\" ", state.FrontCCW ? "true" : "false");
-            fprintf_s(pFile, u8"depth_bias=\"%s\" ", std::to_string(state.DepthBias).c_str());
-            fprintf_s(pFile, u8"depth_bias_clamp=\"%s\" ", std::to_string(state.DepthBiasClamp).c_str());
-            fprintf_s(pFile, u8"depth_clip_enable=\"%s\" ", state.DepthClipEnable ? "true" : "false");
-            fprintf_s(pFile, u8"enable_consevative_raster=\"%s\" ", state.EnableConservativeRaster ? "true" : "false");
-            fprintf_s(pFile, u8"/>\n");
-        }
-    }
-
-    if (!m_DepthStencilStates.empty())
-    {
-        for(auto& itr : m_DepthStencilStates)
-        {
-            auto& state = itr.second;
-            fprintf_s(pFile, u8"    <depthsencil_state name=\"%s\" ", itr.first.c_str());
-            fprintf_s(pFile, u8"depth_enable=\"%s\" ", state.DepthEnable ? "true" : "false");
-            fprintf_s(pFile, u8"depth_write_mask=\"%s\" ", ToString(state.DepthWriteMask));
-            fprintf_s(pFile, u8"depth_func=\"%s\" ", ToString(state.DepthFunc));
-            fprintf_s(pFile, u8"stencil_enable=\"%s\" ", state.StencilEnable ? "true" : "false");
-            fprintf_s(pFile, u8"stencil_read_mask=\"0x%x\" ", state.StencilReadMask);
-            fprintf_s(pFile, u8"stencil_write_mask=\"0x%x\" ", state.StencilWriteMask);
-            fprintf_s(pFile, u8"front_face_stencil_fail=\"%s\" ", ToString(state.FrontFaceStencilFail));
-            fprintf_s(pFile, u8"front_face_stencil_depth_fail=\"%s\" ", ToString(state.FrontFaceStencilDepthFail));
-            fprintf_s(pFile, u8"front_face_stencil_pass=\"%s\" ", ToString(state.FrontFaceStencilPass));
-            fprintf_s(pFile, u8"back_face_stencil_fail=\"%s\" ", ToString(state.BackFaceStencilFail));
-            fprintf_s(pFile, u8"back_face_stencil_depth_fail=\"%s\" ", ToString(state.BackFaceStencilDepthFail));
-            fprintf_s(pFile, u8"back_face_stencil_pass=\"%s\" ", ToString(state.BackFaceStencilPass));
-            fprintf_s(pFile, u8"back_face_stencil_func=\"%s\" ", ToString(state.BackFaceStencilFunc));
-            fprintf_s(pFile, u8"/>\n");
-        }
-    }
-
-    if (!m_BlendStates.empty())
-    {
-        for(auto& itr : m_BlendStates)
-        {
-            auto& state = itr.second;
-            fprintf_s(pFile, u8"    <blend_state name=\"%s\" ", itr.first.c_str());
-            fprintf_s(pFile, u8"alpha_to_coverage_enable=\"%s\" ", state.AlphaToCoverageEnable ? "true" : "false");
-            fprintf_s(pFile, u8"blend_enable=\"%s\" ", state.BlendEnable ? "true" : "false");
-            fprintf_s(pFile, u8"src_blend=\"%s\" ", ToString(state.SrcBlend));
-            fprintf_s(pFile, u8"dst_blend=\"%s\" ", ToString(state.DstBlend));
-            fprintf_s(pFile, u8"blend_op=\"%s\" ", ToString(state.BlendOp));
-            fprintf_s(pFile, u8"src_blend_alpha=\"%s\" ", ToString(state.SrcBlendAlpha));
-            fprintf_s(pFile, u8"dst_blend_alpha=\"%s\" ", ToString(state.DstBlendAlpha));
-            fprintf_s(pFile, u8"blend_op_alpha=\"%s\" ", ToString(state.BlendOpAlpha));
-            fprintf_s(pFile, u8"render_target_write_mask=\"0x%x\" ", state.RenderTargetWriteMask);
-            fprintf_s(pFile, u8"/>\n");
-        }
-    }
-
-    if (!m_Properties.Values.empty() || !m_Properties.Textures.empty())
-    {
-        fprintf_s(pFile, u8"    <properties>\n");
-        for(auto& itr : m_Properties.Values)
-        {
-            auto& prop = itr.second;
-            switch(prop.Type)
-            {
-            case PROPERTY_TYPE_BOOL:
-                {
-                    fprintf_s(pFile, u8"        <bool name=\"%s\" display_tag=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.DefaultValue0.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_INT:
-                {
-                    fprintf_s(pFile, u8"        <int name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        std::to_string(prop.Step).c_str(),
-                        std::to_string(prop.Min).c_str(),
-                        std::to_string(prop.Max).c_str(),
-                        prop.DefaultValue0.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_FLOAT:
-                {
-                    fprintf_s(pFile, u8"        <float name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        std::to_string(prop.Step).c_str(),
-                        std::to_string(prop.Min).c_str(),
-                        std::to_string(prop.Max).c_str(),
-                        prop.DefaultValue0.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_FLOAT2:
-                {
-                    fprintf_s(pFile, u8"        <float2 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        std::to_string(prop.Step).c_str(),
-                        std::to_string(prop.Min).c_str(),
-                        std::to_string(prop.Max).c_str(),
-                        prop.DefaultValue0.c_str(),
-                        prop.DefaultValue1.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_FLOAT3:
-                {
-                    fprintf_s(pFile, u8"        <float3 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" z=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        std::to_string(prop.Step).c_str(),
-                        std::to_string(prop.Min).c_str(),
-                        std::to_string(prop.Max).c_str(),
-                        prop.DefaultValue0.c_str(),
-                        prop.DefaultValue1.c_str(),
-                        prop.DefaultValue2.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_FLOAT4:
-                {
-                    fprintf_s(pFile, u8"        <float4 name=\"%s\" display_tag=\"%s\" step=\"%s\" min=\"%s\" max=\"%s\" x=\"%s\" y=\"%s\" z=\"%s\" w=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        std::to_string(prop.Step).c_str(),
-                        std::to_string(prop.Min).c_str(),
-                        std::to_string(prop.Max).c_str(),
-                        prop.DefaultValue0.c_str(),
-                        prop.DefaultValue1.c_str(),
-                        prop.DefaultValue2.c_str(),
-                        prop.DefaultValue3.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_COLOR3:
-                {
-                    fprintf_s(pFile, u8"        <color3 name=\"%s\" display_tag=\"%s\" r=\"%s\" g=\"%s\" b=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.DefaultValue0.c_str(),
-                        prop.DefaultValue1.c_str(),
-                        prop.DefaultValue2.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_COLOR4:
-                {
-                    fprintf_s(pFile, u8"        <color4 name=\"%s\" display_tag=\"%s\" r=\"%s\" g=\"%s\" b=\"%s\" a=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.DefaultValue0.c_str(),
-                        prop.DefaultValue1.c_str(),
-                        prop.DefaultValue2.c_str(),
-                        prop.DefaultValue3.c_str());
-                }
-                break;
-            }
-        }
-
-        for(auto& itr : m_Properties.Textures)
-        {
-            auto& prop = itr.second;
-            switch(prop.Type)
-            {
-            case PROPERTY_TYPE_TEXTURE1D:
-                {
-                    fprintf_s(pFile, u8"        <map1d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURE1D_ARRAY:
-                {
-                    fprintf_s(pFile, u8"        <map1darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURE2D:
-                {
-                    fprintf_s(pFile, u8"        <map2d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURE2D_ARRAY:
-                {
-                    fprintf_s(pFile, u8"        <map2darray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURE3D:
-                {
-                    fprintf_s(pFile, u8"        <map3d name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURECUBE:
-                {
-                    fprintf_s(pFile, u8"        <mapcube name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-
-            case PROPERTY_TYPE_TEXTURECUBE_ARRAY:
-                {
-                    fprintf_s(pFile, u8"        <mapcubearray name=\"%s\" display_tag=\"%s\" srgb=\"%s\" default=\"%s\" />\n",
-                        prop.Name.c_str(),
-                        prop.DisplayTag.c_str(),
-                        prop.EnableSRGB ? "true" : "false",
-                        prop.DefaultValue.c_str());
-                }
-                break;
-            }
-        }
-        fprintf_s(pFile, u8"    </properties>\n\n");
-    }
-
-    for(size_t i=0; i<m_Technieues.size(); ++i)
-    {
-        auto& technique = m_Technieues[i];
-
-        fprintf_s(pFile, u8"    <technique name=\"%s\">\n", technique.Name.c_str());
-
-        for(size_t j=0; j<m_Technieues[i].Pass.size(); ++j)
-        {
-            auto& pass = technique.Pass[j];
-
-            fprintf_s(pFile, u8"        <pass name=\"%s\">\n", pass.Name.c_str());
-            for(size_t k=0; k<pass.Shaders.size(); ++k)
-            {
-                auto& shader = pass.Shaders[k];
-                fprintf_s(pFile, u8"            <shader type=\"%s\" profile=\"%s\" name=\"%s\"/>\n", ShaderTypeString(shader.Type), shader.Profile.c_str(), shader.EntryPoint.c_str());
-            }
-            if (!pass.RasterizerState.empty())
-            {
-                fprintf_s(pFile, u8"            <rs name=\"%s\"/>\n", pass.RasterizerState.c_str());
-            }
-            if (!pass.DepthStencilState.empty())
-            {
-                fprintf_s(pFile, u8"            <dss name=\"%s\"/>\n", pass.DepthStencilState.c_str());
-            }
-            if (!pass.BlendState.empty())
-            {
-                fprintf_s(pFile, u8"            <bs name=\"%s\"/>\n", pass.BlendState.c_str());
-            }
-
-            fprintf_s(pFile, u8"        </pass>\n");
-        }
-
-        fprintf_s(pFile, u8"    </technique>\n\n");
-    }
-
-    fprintf_s(pFile, u8"</root>\n");
-    fclose(pFile);
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
-//      ソースコードを出力します.
-//-----------------------------------------------------------------------------
-bool FxParser::WriteSourceCode(const char* filename)
-{
-    FILE* pFile;
-
-    auto err = fopen_s(&pFile, filename, "w");
-    if ( err != 0 )
-    {
-        ELOG( "Error : File Open Failed. filename = %s", filename );
-        return false;
-    }
-
-    fprintf_s(pFile,"%s", m_SourceCode.c_str());
-    fclose(pFile);
-
-    return true;
-}
-
-//-----------------------------------------------------------------------------
 //      ソースコードを取得します.
 //-----------------------------------------------------------------------------
 const char* FxParser::GetSourceCode() const
@@ -3837,5 +3609,85 @@ const std::vector<Technique>& FxParser::GetTechniques() const
 //-----------------------------------------------------------------------------
 const Properties& FxParser::GetProperties() const
 { return m_Properties; }
+
+//-----------------------------------------------------------------------------
+//      インクルード文を収集します.
+//-----------------------------------------------------------------------------
+bool FxParser::CorrectIncludes(const char* filename)
+{
+    std::ifstream stream;
+    stream.open(filename, std::ios::in);
+
+    if (!stream.is_open())
+    {
+        return false;
+    }
+
+    std::string line;
+
+    for (;;)
+    {
+        if (!stream)
+        { break; }
+
+        if (stream.eof())
+        { break; }
+
+        stream >> line;
+
+        auto pos = line.find("#include");
+        if (pos != std::string::npos)
+        {
+            stream >> line;
+
+            Info info;
+            info.IncludeFile = "#include ";
+            info.IncludeFile += line;
+
+            line = Replace(line, "\"", "");
+            line = Replace(line, "<", "");
+            line = Replace(line, ">", "");
+            line = Replace(line, "\r\n", "");
+
+            info.FindPath    = line;
+
+            for (size_t i = 0; i < m_DirPaths.size(); ++i)
+            {
+                auto path = m_DirPaths[i] + "\\" + line;
+                if (CorrectIncludes(path.c_str()))
+                {
+                    info.FindPath = path;
+                    break;
+                }
+            }
+
+            // ここで追加.
+            m_Includes.push_back(info);
+        }
+    }
+
+    stream.close();
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+//      インクルード文を展開します.
+//-----------------------------------------------------------------------------
+bool FxParser::Expand(std::string& inout)
+{
+    bool find = false;
+
+    for (size_t i = 0; i < m_Includes.size(); ++i)
+    {
+        bool hit = false;
+        inout = Replace(inout, m_Includes[i].IncludeFile, m_Includes[i].Code, hit);
+        if (hit)
+        { find = true; }
+    }
+
+    inout = Replace(inout, "\r\n", "\n");
+
+    return find;
+}
 
 } // namespace asura

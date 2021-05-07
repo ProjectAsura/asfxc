@@ -339,14 +339,14 @@ struct Shader
 ///////////////////////////////////////////////////////////////////////////////
 struct RasterizerState
 {
-    POLYGON_MODE  PolygonMode                   = POLYGON_MODE_SOLID;
-    CULL_TYPE     CullMode                      = CULL_TYPE_NONE; 
-    bool          FrontCCW                      = true;
-    uint32_t      DepthBias                     = 0;
-    float         DepthBiasClamp                = 0.0f;
-    float         SlopeScaledDepthBias          = 0.0f;
-    bool          DepthClipEnable               = false;
-    bool          EnableConservativeRaster      = false;
+    POLYGON_MODE  PolygonMode                   = POLYGON_MODE_SOLID;   //!< ポリゴンモード.
+    CULL_TYPE     CullMode                      = CULL_TYPE_NONE;       //!< カリングタイプ.
+    bool          FrontCCW                      = true;                 //!< 反時計回りを前面にするかどうか.
+    uint32_t      DepthBias                     = 0;                    //!< 深度バイアス.
+    float         DepthBiasClamp                = 0.0f;                 //!< 深度バイアスのクランプ値.
+    float         SlopeScaledDepthBias          = 0.0f;                 //!< 傾斜スケール深度バイアス.
+    bool          DepthClipEnable               = false;                //!< 深度クリップを有効化するかどうか.
+    bool          EnableConservativeRaster      = false;                //!< コンサバティブラスタライゼーションを有効化するかどうか.
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -354,12 +354,12 @@ struct RasterizerState
 ///////////////////////////////////////////////////////////////////////////////
 struct DepthStencilState
 {
-    bool                DepthEnable                   = true;
-    DEPTH_WRITE_MASK    DepthWriteMask                = DEPTH_WRITE_MASK_ALL;
-    COMPARE_TYPE        DepthFunc                     = COMPARE_TYPE_LESS;
-    bool                StencilEnable                 = false;
-    uint8_t             StencilReadMask               = 0xff;
-    uint8_t             StencilWriteMask              = 0xff;
+    bool                DepthEnable                   = true;                   //!< 深度テストを有効化するかどうか.
+    DEPTH_WRITE_MASK    DepthWriteMask                = DEPTH_WRITE_MASK_ALL;   //!< 深度書き込みマスク.
+    COMPARE_TYPE        DepthFunc                     = COMPARE_TYPE_LESS;      //!< 深度比較関数.
+    bool                StencilEnable                 = false;                  //!< ステンシルテストを有効化するかどうか.
+    uint8_t             StencilReadMask               = 0xff;                   //!< ステンシル読み取りマスク.
+    uint8_t             StencilWriteMask              = 0xff;                   //!< ステンシル書き込みマスク.
     STENCIL_OP_TYPE     FrontFaceStencilFail          = STENCIL_OP_KEEP;
     STENCIL_OP_TYPE     FrontFaceStencilDepthFail     = STENCIL_OP_KEEP;
     STENCIL_OP_TYPE     FrontFaceStencilPass          = STENCIL_OP_KEEP;
@@ -486,6 +486,33 @@ struct Technique
     std::vector<Pass>   Pass;   //!< パスデータです.
 };
 
+// 文字列に変換.
+const char* ToString(SHADER_TYPE value);
+const char* ToString(POLYGON_MODE mode);
+const char* ToString(CULL_TYPE type);
+const char* ToString(BLEND_TYPE type);
+const char* ToString(FILTER_MODE type);
+const char* ToString(MIPMAP_MODE type);
+const char* ToString(ADDRESS_MODE type);
+const char* ToString(BORDER_COLOR type);
+const char* ToString(COMPARE_TYPE type);
+const char* ToString(STENCIL_OP_TYPE type);
+const char* ToString(DEPTH_WRITE_MASK type);
+const char* ToString(BLEND_OP_TYPE type);
+
+// 文字列から変換.
+POLYGON_MODE        ParsePolygonMode    (const char* value);
+BLEND_TYPE          ParseBlendType      (const char* value);
+FILTER_MODE         ParseFilterMode     (const char* value);
+MIPMAP_MODE         ParseMipmapMode     (const char* value);
+ADDRESS_MODE        ParseAddressMode    (const char* value);
+BORDER_COLOR        ParseBorderColor    (const char* value);
+CULL_TYPE           ParseCullType       (const char* value);
+COMPARE_TYPE        ParseCompareType    (const char* value);
+STENCIL_OP_TYPE     ParseStencilOpType  (const char* value);
+DEPTH_WRITE_MASK    ParseDepthWriteMask (const char* value);
+BLEND_OP_TYPE       ParseBlendOpType    (const char* value);
+
 ///////////////////////////////////////////////////////////////////////////////
 // FxParser class
 ///////////////////////////////////////////////////////////////////////////////
@@ -529,25 +556,6 @@ public:
     //! @retval false   解析に失敗.
     //------------------------------------------------------------------------
     bool Parse(const char* filename);
-
-    //------------------------------------------------------------------------
-    //! @brief      XMLにバリエーション情報を書き出します.
-    //! 
-    //! @param[in]      xmlpath     XMLファイルパス
-    //! @param[in]      hlslpath    HLSLファイルパス.
-    //! @retval true    書き出しに成功.
-    //! @retval false   書き出しに失敗.
-    //------------------------------------------------------------------------
-    bool WriteVariationInfo(const char* xmlpath, const char* hlslpath);
-
-    //------------------------------------------------------------------------
-    //! @brief      ソースコードを書き出します.
-    //! 
-    //! @param[in]      filename        ファイル名.
-    //! @retval true    書き出しに成功.
-    //! @retval false   書き出しに失敗.
-    //------------------------------------------------------------------------
-    bool WriteSourceCode(const char* filename);
 
     //------------------------------------------------------------------------
     //! @brief      ソースコードを取得します.
@@ -620,10 +628,19 @@ public:
     const Properties& GetProperties() const;
 
 private:
+    ///////////////////////////////////////////////////////////////////////////
+    // Info structure
+    ///////////////////////////////////////////////////////////////////////////
+    struct Info
+    {
+        std::string     IncludeFile;    //!< インクルード文
+        std::string     FindPath;       //!< 解決済みファイルパス.
+        std::string     Code;           //!< 該当ファイル.
+    };
+
     //========================================================================
     // private variables.
     //========================================================================
-    char*                                       m_pBuffer;
     Tokenizer                                   m_Tokenizer;
     std::vector<Technique>                      m_Technieues;
     std::map<std::string, Shader>               m_Shaders;
@@ -635,11 +652,11 @@ private:
     std::map<std::string, Structure>            m_Structures;
     std::map<std::string, Resource>             m_Resources;
     Properties                                  m_Properties;
-    std::vector<std::string>                    m_Includes;
     std::string                                 m_SourceCode;
     int                                         m_ShaderCounter;
-    size_t                                      m_BufferSize;
-    size_t                                      m_ReadSize;
+    std::vector<std::string>                    m_DirPaths;
+    std::vector<Info>                           m_Includes;
+    std::string                                 m_Expanded;
 
     //========================================================================
     // private methods.
@@ -661,6 +678,9 @@ private:
     void ParseResourceDetail(RESOURCE_TYPE type);
     void ParseTextureProperty(PROPERTY_TYPE type);
     SHADER_TYPE GetShaderType();
+
+    bool CorrectIncludes(const char* filename);
+    bool Expand(std::string& inout);
 };
 
 } // namespace asura
