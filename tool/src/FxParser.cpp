@@ -721,25 +721,7 @@ bool FxParser::Parse(const char* filename)
 
     while(!m_Tokenizer.IsEnd())
     {
-        auto tag = m_Tokenizer.GetAsChar();
-
         bool output = true;
-
-        //if (strlen(tag) >= 2 )
-        //{
-        //    // Cスタイルによるコメント行は処理しない.
-        //    if (tag[0] == '/' && tag[1] == '*')
-        //    {
-        //        output = false;
-        //        m_Tokenizer.SkipTo("*/");
-        //    }
-
-        //    if (tag[0] == '/' && tag[1] == '/' )
-        //    {
-        //        output = false;
-        //        m_Tokenizer.SkipLine();
-        //    }
-        //}
 
         // プリプロセッサ系.
         if (m_Tokenizer.Compare("#"))
