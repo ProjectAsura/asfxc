@@ -551,14 +551,14 @@ std::string GetDirectoryPathA( const char* filePath )
     // 末尾の\\は取り除いた状態で返却します.
 
     std::string path = filePath;
-    auto idx = path.find_last_of( "/" );
+    auto idx = path.find_last_of( "\\" );
     if ( idx != std::string::npos )
     {
         auto result = path.substr( 0, idx );
         return result;
     }
 
-    idx = path.find_last_of( "\\" );
+    idx = path.find_last_of( "/" );
     if ( idx != std::string::npos )
     {
         auto result = path.substr( 0, idx );
@@ -725,21 +725,21 @@ bool FxParser::Parse(const char* filename)
 
         bool output = true;
 
-        if (strlen(tag) >= 2 )
-        {
-            // Cスタイルによるコメント行は処理しない.
-            if (tag[0] == '/' && tag[1] == '*')
-            {
-                output = false;
-                m_Tokenizer.SkipTo("*/");
-            }
+        //if (strlen(tag) >= 2 )
+        //{
+        //    // Cスタイルによるコメント行は処理しない.
+        //    if (tag[0] == '/' && tag[1] == '*')
+        //    {
+        //        output = false;
+        //        m_Tokenizer.SkipTo("*/");
+        //    }
 
-            if (tag[0] == '/' && tag[1] == '/' )
-            {
-                output = false;
-                m_Tokenizer.SkipLine();
-            }
-        }
+        //    if (tag[0] == '/' && tag[1] == '/' )
+        //    {
+        //        output = false;
+        //        m_Tokenizer.SkipLine();
+        //    }
+        //}
 
         // プリプロセッサ系.
         if (m_Tokenizer.Compare("#"))
@@ -766,7 +766,6 @@ bool FxParser::Parse(const char* filename)
         else if (m_Tokenizer.CompareAsLower("properties"))
         {
             auto ptr = m_Tokenizer.GetPtr();
-            output = false;
             auto size = (ptr - cur) - strlen("properties");
             if (size > 0)
             {
@@ -775,6 +774,7 @@ bool FxParser::Parse(const char* filename)
             }
 
             ParseProperties();
+            output = false;
         }
         else if (
            m_Tokenizer.CompareAsLower("Texture1D")
@@ -845,7 +845,8 @@ bool FxParser::Parse(const char* filename)
             { putchar(cur[i]); }
         #endif
 
-            m_SourceCode.append(cur, size);
+            if (size > 0)
+            { m_SourceCode.append(cur, size); }
         }
 
         cur = ptr;
@@ -885,6 +886,8 @@ bool FxParser::Load(const char* filename)
 
     for(size_t i=0; i<m_Includes.size(); ++i)
     { LoadFile(m_Includes[i].FindPath.c_str(), m_Includes[i].Code); }
+
+    m_Expanded.clear();
 
     if (!LoadFile(filename, m_Expanded))
     { return false; }
@@ -1595,7 +1598,7 @@ void FxParser::ParseConstantBuffer()
     if (m_Tokenizer.Compare(":"))
     {
         m_Tokenizer.Next();
-        assert(m_Tokenizer.CompareAsLower("register"));   
+        assert(m_Tokenizer.CompareAsLower("register"));
         m_Tokenizer.Next(); // register
         assert(m_Tokenizer.Compare("("));
         m_Tokenizer.Next(); // "("
@@ -2624,6 +2627,7 @@ void FxParser::ParseProperties()
     uint32_t bufferSize = 0;
     uint32_t offset = 0;
 
+
     while(!m_Tokenizer.IsEnd())
     {
         // ブロック終了.
@@ -2631,7 +2635,6 @@ void FxParser::ParseProperties()
         {
             m_Tokenizer.Next();
             assert(m_Tokenizer.Compare(";"));
-            m_Tokenizer.Next();
             count--;
             if (count == 0)
             { break; }
@@ -2671,8 +2674,7 @@ void FxParser::ParseProperties()
             prop.Max            = 0.0f;
             prop.DefaultValue0  = defValue;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += sizeof(int); // シェーダ上で bool は 4byteであるため.
         }
@@ -2720,8 +2722,7 @@ void FxParser::ParseProperties()
             prop.Max            = maxi;
             prop.DefaultValue0  = defValue;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += sizeof(int);
         }
@@ -2771,8 +2772,7 @@ void FxParser::ParseProperties()
             prop.Max            = maxi;
             prop.DefaultValue0  = defValue;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += sizeof(float);
         }
@@ -2829,8 +2829,7 @@ void FxParser::ParseProperties()
             prop.DefaultValue0  = defValueX;
             prop.DefaultValue1  = defValueY;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += (sizeof(float) * 2);
         }
@@ -2889,8 +2888,7 @@ void FxParser::ParseProperties()
             prop.DefaultValue1  = defValueY;
             prop.DefaultValue2  = defValueZ;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += (sizeof(float) * 3);
         }
@@ -2952,8 +2950,7 @@ void FxParser::ParseProperties()
             prop.DefaultValue2  = defValueZ;
             prop.DefaultValue3  = defValueW;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += (sizeof(float) * 4);
         }
@@ -2997,8 +2994,7 @@ void FxParser::ParseProperties()
             prop.DefaultValue1  = defValueY;
             prop.DefaultValue2  = defValueZ;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += (sizeof(float) * 3);
         }
@@ -3044,8 +3040,7 @@ void FxParser::ParseProperties()
             prop.DefaultValue2  = defValueZ;
             prop.DefaultValue3  = defValueW;
 
-            if (m_Properties.Values.find(prop.Name) == m_Properties.Values.end())
-            { m_Properties.Values[prop.Name] = prop; }
+            m_Properties.Values.push_back(prop);
 
             offset += (sizeof(float) * 4);
         }
@@ -3083,17 +3078,19 @@ void FxParser::ParseProperties()
         }
     }
 
+    // メモリ最適化.
+    m_Properties.Values.shrink_to_fit();
+    m_Properties.Textures.shrink_to_fit();
+
     m_Properties.BufferSize = offset;
 
     if (!m_Properties.Values.empty())
     {
-        //m_SourceCode += "\n";
         m_SourceCode += "cbuffer CbProperties\n";
         m_SourceCode += "{\n";
 
-        for(auto& itr : m_Properties.Values)
+        for(auto& prop : m_Properties.Values)
         {
-            auto& prop = itr.second;
             m_SourceCode += "    ";
             switch(prop.Type)
             {
@@ -3200,9 +3197,8 @@ void FxParser::ParseProperties()
 
     if (!m_Properties.Textures.empty())
     {
-        for(auto& itr : m_Properties.Textures)
+        for(auto& prop : m_Properties.Textures)
         {
-            auto& prop = itr.second;
             switch(prop.Type)
             {
             case PROPERTY_TYPE_TEXTURE1D:
@@ -3324,8 +3320,7 @@ void FxParser::ParseTextureProperty(PROPERTY_TYPE type)
     prop.EnableSRGB     = srgb;
     prop.DefaultValue   = defValue;
 
-    if (m_Properties.Textures.find(prop.Name) == m_Properties.Textures.end())
-    { m_Properties.Textures[prop.Name] = prop; }
+    m_Properties.Textures.push_back(prop);
 }
 
 //-----------------------------------------------------------------------------

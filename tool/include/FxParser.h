@@ -451,9 +451,9 @@ struct TextureProperty
 ///////////////////////////////////////////////////////////////////////////////
 struct Properties
 {
-    uint32_t                                BufferSize; //!< バッファサイズです.
-    std::map<std::string, ValueProperty>    Values;     //!< 値です.
-    std::map<std::string, TextureProperty>  Textures;   //!< テクスチャです.
+    uint32_t                        BufferSize; //!< バッファサイズです.
+    std::vector<ValueProperty>      Values;     //!< 値です.
+    std::vector<TextureProperty>    Textures;   //!< テクスチャです.
 };
 
 ///////////////////////////////////////////////////////////////////////////////

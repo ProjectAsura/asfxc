@@ -244,9 +244,8 @@ bool WriteVariationInfo(const asura::FxParser& parser, const char* xmlpath, cons
     if (!parser.GetProperties().Values.empty() || !parser.GetProperties().Textures.empty())
     {
         fprintf_s(pFile, u8"    <properties>\n");
-        for(auto& itr : parser.GetProperties().Values)
+        for(auto& prop : parser.GetProperties().Values)
         {
-            auto& prop = itr.second;
             switch(prop.Type)
             {
             case asura::PROPERTY_TYPE_BOOL:
@@ -349,9 +348,8 @@ bool WriteVariationInfo(const asura::FxParser& parser, const char* xmlpath, cons
             }
         }
 
-        for(auto& itr : parser.GetProperties().Textures)
+        for(auto& prop : parser.GetProperties().Textures)
         {
-            auto& prop = itr.second;
             switch(prop.Type)
             {
             case asura::PROPERTY_TYPE_TEXTURE1D:
